@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "Liquidity Hunter"
+version = "1.0.0"
+id = "artifacts/liquidity-hunter"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 22059
+
+[services.development]
+run = "pnpm --filter @workspace/liquidity-hunter run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/liquidity-hunter", "run", "build" ]
+publicDir = "artifacts/liquidity-hunter/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "22059"
+BASE_PATH = "/"

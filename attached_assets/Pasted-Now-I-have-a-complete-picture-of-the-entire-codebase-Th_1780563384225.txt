@@ -1,0 +1,107 @@
+Now I have a complete picture of the entire codebase. This is a thorough review.
+
+🔬 Deep Code Review — Liquidity Hunter
+
+🏗️ Architecture Assessment
+
+The project structure is genuinely well-engineered. You’ve built a proper modular SMC detection engine — not a UI wrapper around vague logic. Key highlights:
+
+	•	Clean separation of concerns — each concept (structure, liquidity, OBs, FVG, PD array, SMT, daily bias) lives in its own module. This is production-grade architecture.
+	•	React Query for data fetching with refetchInterval, staleTime, retry, and select memoisation — correct implementation, not naïve useEffect polling.
+	•	Server functions (createServerFn) for Binance and Yahoo Finance calls — smart move to avoid CORS and IP rate limits at the browser level.
+	•	Centralised config in SMC_CONFIG — all magic numbers in one place. Excellent practice.
+	•	Barrel export in agents.ts for clean imports.
+
+This is the work of someone who understands both trading concepts and software architecture.
+
+🧠 ICT/SMC Logic Review — The Engine
+
+Structure (structure.ts) — Strong ✅
+
+The BOS/CHoCH state machine is conceptually correct. ATR-filtered pivots with close-confirmation is exactly how ICT teaches it — wick sweeps are routed to the liquidity agent, not the structure agent. That’s a subtle but important distinction most SMC tools get wrong.
+
+One gap: the confidence score is purely a pivot count ratio ((highs + lows) / 12). It doesn’t weight recency — 10 old pivots score higher than 4 recent clean ones. Consider weighting recent pivots more heavily.
+
+Liquidity (liquidity.ts) — Excellent ✅
+
+The composite scoring formula is solid:
+
+score = touches × recency_decay × session_weight × displacement_factor
+
+
+Asia session getting 1.3 weight is a correct ICT insight — Asia highs/lows are engineered NY targets. The wasSwept function correctly distinguishes wick-through vs close-through. The sort-sweep O(n log n) clustering for equal levels is efficient.
+
+One concern: liquidityHalfLifeBars: 200 is a flat constant across all timeframes. A pool that’s 200 bars old on a 1m chart is ~3 hours old. On a 4h chart it’s 33 days old. This number needs to be timeframe-aware, otherwise the decay function produces very different results per TF.
+
+Order Blocks (order-blocks.ts) — Very Strong ✅
+
+The FVG requirement for a valid OB (obRequireFvg: true) is the canonical ICT filter — this separates real institutional OBs from noise. The proximal/distal line distinction is correctly implemented. Breaker block classification (swept + close-through = flip) is accurate.
+
+One issue: the OB classification checks c.close < c.open (bearish candle before bullish impulse) and c.close > c.open (bullish candle before bearish impulse). But ICT’s rule is the last opposite-colour candle before the impulse, not just any opposite-colour candle at i. You’re checking candles[i] → candles[i+1] (impulse) → candles[i+2] (continuation). If there are multiple consecutive bearish candles before the impulse, you should be taking the most recent one. Worth reviewing the loop logic.
+
+FVG (fvg.ts) — Strong ✅
+
+The 3-candle imbalance with displacement body + volume spike confirmation is correct. The fillFraction tracking (how much of the gap has been retested) is a nice touch. The Inversion FVG detection is a sophisticated addition — correctly requiring a reversal bounce after fill to confirm the flip.
+
+PD Array (pd-array.ts) — Good, with a gap ⚠️
+
+The premium/discount zone mapping is correct conceptually. However, there’s only one dealing range being identified. ICT teaches nested PD arrays — the weekly range contains the daily range contains the session range. Showing a single range can mislead: price in “premium” of the session range but “discount” of the weekly range will produce conflicting signals. At minimum, label which timeframe the dealing range came from.
+
+Daily Bias (daily-bias.ts) — Solid ✅
+
+The two-signal combination (swing structure HH/HL + price vs SMA) is a reasonable approximation. The countConsecutiveDirection adds useful trend strength context.
+
+SMT Divergence (smt.ts) — Present but inactive ⚠️
+
+The logic is well-written but buildReport only calls analyzeSMT when correlatedPairs is passed in options. Looking at index.tsx, buildReport(candles) is called without options — so dailyBias, smt, and correlated pair analysis are all silently absent from every report. This is the biggest functional gap in the engine. The tools are built but not wired up.
+
+⚙️ Engineering Issues
+
+1. liquidityHalfLifeBars is timeframe-unaware (mentioned above) — this will cause incorrect decay on 1m vs 4h pools.
+
+2. buildReport called without dailyCandles or correlatedPairs
+
+// index.tsx
+select: (candles: Candle[]): SmcQueryResult => ({
+  candles,
+  report: buildReport(candles), // ← no options passed
+})
+
+
+The daily bias and SMT modules are completely dead in production.
+
+3. Forex volume is meaningless, but volume gates are active
+volumeSpikeMin: 1.5 is the same for both crypto and forex. Forex tick volume from Yahoo Finance is unreliable/zero — yet isVolumeSpike is used as a gate in both FVG and OB detection. For forex, you’ll get dramatically fewer valid OBs and FVGs than you should, because the volume gate will reject good setups. You have a comment about this in config but the gate isn’t disabled for forex.
+
+4. 4h candles are aggregated from 1h Yahoo data
+
+"4h": { interval: "60m", range: "6mo", aggregate: 4 }
+
+
+Aggregating 4×1h into a synthetic 4h candle will not match true 4h candle boundaries — the open/close times won’t align to standard 4h session cuts. This could produce slightly wrong OB/FVG detection on forex 4h.
+
+5. No session-aware filtering in the draw scorer
+The draw target in report.ts scores by proximity, strength, and bias — but doesn’t penalise draws identified outside killzone windows. A BSL identified during Asia session off-hours should score lower than the same level identified during NY AM.
+
+📊 Priority Fix List
+
+
+
+|Priority  |Issue                                                       |File                              |Fix                                          |
+|----------|------------------------------------------------------------|----------------------------------|---------------------------------------------|
+|🔴 Critical|`buildReport` not receiving `dailyCandles`                  |`index.tsx`                       |Pass 1D candles as a separate query          |
+|🔴 Critical|SMT pairs never passed → always silent                      |`index.tsx`                       |Wire correlated pair candles into options    |
+|🟠 High    |`liquidityHalfLifeBars` timeframe-unaware                   |`config.ts`                       |Make it a per-TF map                         |
+|🟠 High    |Volume gate breaks forex OB/FVG detection                   |`config.ts` + `forex.functions.ts`|Set `volumeSpikeMin: 0` for forex            |
+|🟡 Medium  |OB detection doesn’t guarantee “last” opposite-colour candle|`order-blocks.ts`                 |Add backwards scan for last qualifying candle|
+|🟡 Medium  |PD array single range — no nested context                   |`pd-array.ts`                     |Label the TF source; add a secondary range   |
+|🟡 Medium  |Structure confidence ignores recency                        |`structure.ts`                    |Weight recent pivots higher                  |
+|🟢 Low     |4h forex = aggregated 1h                                    |`forex.functions.ts`              |Align aggregation to session boundaries      |
+
+🏁 Overall Verdict
+
+This is a legitimately impressive SMC engine. The core detection logic — close-confirmed BOS/CHoCH, FVG-gated OBs, composite liquidity scoring with session weighting, breaker blocks, inversion FVGs, SMT divergence — is more rigorous than most commercial SMC tools I’ve seen. The architecture is clean, the data flow is solid, and the UI abstractions are correct.
+
+The biggest issue is that the most advanced features (daily bias, SMT, correlated pairs) are built but not wired into the main query loop. That’s a one-file fix in index.tsx with a significant payoff.
+
+Want me to write the fix for the buildReport wiring + timeframe-aware half-life decay? Those two changes would meaningfully upgrade the engine’s accuracy.

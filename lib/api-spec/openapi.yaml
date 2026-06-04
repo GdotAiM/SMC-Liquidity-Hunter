@@ -1,22 +1,24 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Liquidity Hunter — SMC Analysis API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: analysis
+    description: SMC market analysis
+  - name: symbols
+    description: Symbol discovery
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,13 +26,423 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /symbols:
+    get:
+      operationId: listSymbols
+      tags: [symbols]
+      summary: Get all supported symbols grouped by market
+      responses:
+        "200":
+          description: Symbol list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SymbolList"
+
+  /analysis/crypto:
+    get:
+      operationId: analyzeCrypto
+      tags: [analysis]
+      summary: Get full SMC analysis for a crypto pair
+      parameters:
+        - name: symbol
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Binance symbol e.g. BTCUSDT
+        - name: timeframe
+          in: query
+          required: false
+          schema:
+            type: string
+            default: "4h"
+        - name: correlatedSymbol
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Symbol for SMT divergence e.g. ETHUSDT
+      responses:
+        "200":
+          description: SMC analysis report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SmcReport"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /analysis/forex:
+    get:
+      operationId: analyzeForex
+      tags: [analysis]
+      summary: Get full SMC analysis for a forex pair
+      parameters:
+        - name: symbol
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Yahoo Finance symbol e.g. EURUSD=X
+        - name: timeframe
+          in: query
+          required: false
+          schema:
+            type: string
+            default: "4h"
+        - name: correlatedSymbol
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Yahoo symbol for SMT divergence e.g. GBPUSD=X
+      responses:
+        "200":
+          description: SMC analysis report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SmcReport"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
 components:
   schemas:
     HealthStatus:
       type: object
+      required: [status]
       properties:
         status:
           type: string
-      required:
-        - status
 
+    ApiError:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+
+    SymbolInfo:
+      type: object
+      required: [symbol, label, market]
+      properties:
+        symbol:
+          type: string
+        label:
+          type: string
+        market:
+          type: string
+        correlatedSymbol:
+          type: ["string", "null"]
+
+    SymbolList:
+      type: object
+      required: [crypto, forex]
+      properties:
+        crypto:
+          type: array
+          items:
+            $ref: "#/components/schemas/SymbolInfo"
+        forex:
+          type: array
+          items:
+            $ref: "#/components/schemas/SymbolInfo"
+
+    Candle:
+      type: object
+      required: [time, open, high, low, close, volume]
+      properties:
+        time:
+          type: number
+        open:
+          type: number
+        high:
+          type: number
+        low:
+          type: number
+        close:
+          type: number
+        volume:
+          type: number
+
+    StructurePoint:
+      type: object
+      required: [index, price, type, confirmed, time]
+      properties:
+        index:
+          type: number
+        price:
+          type: number
+        type:
+          type: string
+        confirmed:
+          type: boolean
+        time:
+          type: number
+
+    StructureBreak:
+      type: object
+      required: [index, price, type, direction, time]
+      properties:
+        index:
+          type: number
+        price:
+          type: number
+        type:
+          type: string
+        direction:
+          type: string
+        time:
+          type: number
+
+    StructureResult:
+      type: object
+      required: [trend, bias, confidence, pivots, breaks]
+      properties:
+        trend:
+          type: string
+        bias:
+          type: string
+        confidence:
+          type: number
+        pivots:
+          type: array
+          items:
+            $ref: "#/components/schemas/StructurePoint"
+        breaks:
+          type: array
+          items:
+            $ref: "#/components/schemas/StructureBreak"
+
+    LiquidityPool:
+      type: object
+      required: [price, type, score, touches, wasSwept, time, index]
+      properties:
+        price:
+          type: number
+        type:
+          type: string
+        score:
+          type: number
+        touches:
+          type: number
+        wasSwept:
+          type: boolean
+        sweptAt:
+          type: ["number", "null"]
+        time:
+          type: number
+        index:
+          type: number
+        session:
+          type: ["string", "null"]
+
+    LiquidityResult:
+      type: object
+      required: [pools]
+      properties:
+        pools:
+          type: array
+          items:
+            $ref: "#/components/schemas/LiquidityPool"
+        nearestBSL:
+          allOf:
+            - $ref: "#/components/schemas/LiquidityPool"
+          nullable: true
+        nearestSSL:
+          allOf:
+            - $ref: "#/components/schemas/LiquidityPool"
+          nullable: true
+
+    OrderBlock:
+      type: object
+      required: [type, proximal, distal, time, index, valid, strength, hasFvg]
+      properties:
+        type:
+          type: string
+        proximal:
+          type: number
+        distal:
+          type: number
+        time:
+          type: number
+        index:
+          type: number
+        valid:
+          type: boolean
+        isMitigated:
+          type: boolean
+        isBreaker:
+          type: boolean
+        strength:
+          type: number
+        hasFvg:
+          type: boolean
+
+    FairValueGap:
+      type: object
+      required: [type, top, bottom, time, index, fillFraction]
+      properties:
+        type:
+          type: string
+        top:
+          type: number
+        bottom:
+          type: number
+        time:
+          type: number
+        index:
+          type: number
+        fillFraction:
+          type: number
+        isInversion:
+          type: boolean
+
+    DealingRange:
+      type: object
+      required: [high, low, timeframe]
+      properties:
+        high:
+          type: number
+        low:
+          type: number
+        timeframe:
+          type: string
+
+    PdZone:
+      type: object
+      required: [label, top, bottom, timeframe, type]
+      properties:
+        label:
+          type: string
+        top:
+          type: number
+        bottom:
+          type: number
+        timeframe:
+          type: string
+        type:
+          type: string
+
+    PdArrayResult:
+      type: object
+      required: [currentBias, zones, dealingRange, equilibrium]
+      properties:
+        currentBias:
+          type: string
+        zones:
+          type: array
+          items:
+            $ref: "#/components/schemas/PdZone"
+        dealingRange:
+          $ref: "#/components/schemas/DealingRange"
+        equilibrium:
+          type: number
+
+    DailyBiasResult:
+      type: object
+      required: [bias, strength, consecutiveDays]
+      properties:
+        bias:
+          type: string
+        strength:
+          type: number
+        consecutiveDays:
+          type: number
+        referencedSwing:
+          type: ["string", "null"]
+
+    SmtDivergence:
+      type: object
+      required: [detected, confidence]
+      properties:
+        detected:
+          type: boolean
+        type:
+          type: ["string", "null"]
+        confidence:
+          type: number
+        time:
+          type: ["number", "null"]
+        primarySymbol:
+          type: ["string", "null"]
+        correlatedSymbol:
+          type: ["string", "null"]
+
+    DrawTarget:
+      type: object
+      required: [price, type, score, direction, label]
+      properties:
+        price:
+          type: number
+        type:
+          type: string
+        score:
+          type: number
+        direction:
+          type: string
+        label:
+          type: string
+
+    SmcReport:
+      type: object
+      required: [symbol, market, timeframe, currentPrice, candles, structure, liquidity, orderBlocks, fvg, pdArray, dailyBias, draw, generatedAt]
+      properties:
+        symbol:
+          type: string
+        market:
+          type: string
+        timeframe:
+          type: string
+        currentPrice:
+          type: number
+        generatedAt:
+          type: number
+        candles:
+          type: array
+          items:
+            $ref: "#/components/schemas/Candle"
+        structure:
+          $ref: "#/components/schemas/StructureResult"
+        liquidity:
+          $ref: "#/components/schemas/LiquidityResult"
+        orderBlocks:
+          type: array
+          items:
+            $ref: "#/components/schemas/OrderBlock"
+        fvg:
+          type: array
+          items:
+            $ref: "#/components/schemas/FairValueGap"
+        pdArray:
+          $ref: "#/components/schemas/PdArrayResult"
+        dailyBias:
+          $ref: "#/components/schemas/DailyBiasResult"
+        smt:
+          $ref: "#/components/schemas/SmtDivergence"
+        draw:
+          type: array
+          items:
+            $ref: "#/components/schemas/DrawTarget"

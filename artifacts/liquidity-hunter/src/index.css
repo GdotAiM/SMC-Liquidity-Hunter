@@ -1,0 +1,143 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@plugin "@tailwindcss/typography";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-card-border: hsl(var(--card-border));
+
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+  --color-popover-border: hsl(var(--popover-border));
+
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+  
+  --color-bullish: hsl(var(--bullish));
+  --color-bullish-foreground: hsl(var(--bullish-foreground));
+  --color-bearish: hsl(var(--bearish));
+  --color-bearish-foreground: hsl(var(--bearish-foreground));
+
+  --color-chart-1: hsl(var(--chart-1));
+  --color-chart-2: hsl(var(--chart-2));
+  --color-chart-3: hsl(var(--chart-3));
+  --color-chart-4: hsl(var(--chart-4));
+  --color-chart-5: hsl(var(--chart-5));
+
+  --color-sidebar: hsl(var(--sidebar));
+  --color-sidebar-foreground: hsl(var(--sidebar-foreground));
+  --color-sidebar-border: hsl(var(--sidebar-border));
+  --color-sidebar-primary: hsl(var(--sidebar-primary));
+  --color-sidebar-primary-foreground: hsl(var(--sidebar-primary-foreground));
+  --color-sidebar-accent: hsl(var(--sidebar-accent));
+  --color-sidebar-accent-foreground: hsl(var(--sidebar-accent-foreground));
+  --color-sidebar-ring: hsl(var(--sidebar-ring));
+
+  --font-sans: var(--app-font-sans);
+  --font-serif: var(--app-font-serif);
+  --font-mono: var(--app-font-mono);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+:root {
+  color-scheme: dark;
+  --button-outline: rgba(255,255,255, .10);
+  --badge-outline: rgba(255,255,255, .05);
+
+  --elevate-1: rgba(255,255,255, .04);
+  --elevate-2: rgba(255,255,255, .09);
+
+  /* Deep navy/black trading terminal background */
+  --background: 222 30% 6%;
+  --foreground: 210 20% 98%;
+
+  --border: 220 20% 18%;
+  
+  --card: 222 30% 9%;
+  --card-foreground: 210 20% 98%;
+  --card-border: 220 20% 18%;
+
+  --popover: 222 30% 9%;
+  --popover-foreground: 210 20% 98%;
+  --popover-border: 220 20% 18%;
+
+  /* Electric Cyan / Teal Accent */
+  --primary: 185 90% 50%;
+  --primary-foreground: 222 47% 10%;
+
+  --secondary: 220 20% 14%;
+  --secondary-foreground: 210 20% 98%;
+
+  --muted: 220 20% 12%;
+  --muted-foreground: 215 15% 65%;
+
+  --accent: 220 20% 16%;
+  --accent-foreground: 210 20% 98%;
+
+  --destructive: 350 80% 55%;
+  --destructive-foreground: 210 20% 98%;
+
+  --bullish: 145 75% 45%;
+  --bullish-foreground: 145 90% 10%;
+  
+  --bearish: 350 80% 55%;
+  --bearish-foreground: 350 90% 10%;
+
+  --input: 220 20% 18%;
+  --ring: 185 90% 50%;
+  
+  --chart-1: 185 90% 50%;
+  --chart-2: 145 75% 45%;
+  --chart-3: 350 80% 55%;
+  --chart-4: 45 90% 55%;
+  --chart-5: 280 80% 60%;
+
+  --sidebar: 222 30% 7%;
+  --sidebar-foreground: 210 20% 98%;
+  --sidebar-border: 220 20% 18%;
+  --sidebar-primary: 185 90% 50%;
+  --sidebar-primary-foreground: 222 47% 10%;
+  --sidebar-accent: 220 20% 14%;
+  --sidebar-accent-foreground: 210 20% 98%;
+  --sidebar-ring: 185 90% 50%;
+
+  --app-font-sans: 'Inter', sans-serif;
+  --app-font-serif: Georgia, serif;
+  --app-font-mono: 'JetBrains Mono', 'Fira Code', Menlo, monospace;
+  --radius: 0.25rem;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply font-sans antialiased bg-background text-foreground;
+  }
+}
