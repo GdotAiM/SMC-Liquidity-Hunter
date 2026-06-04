@@ -1,0 +1,421 @@
+Ntloso, after reviewing the codebase, I can already build a fairly accurate Version 1 User Manual. The app is much more sophisticated than a simple signal dashboard—it’s essentially an SMC/ICT Multi-Agent Liquidity Intelligence System.
+
+SMC Pulse Predict (Liquidity Hunter)
+
+User Guide
+
+Purpose
+
+SMC Pulse Predict is designed to identify the most likely next draw on liquidity using Smart Money Concepts (SMC) and ICT principles.
+
+Instead of generating buy/sell signals, it answers:
+
+“Where is price most likely being engineered to go next?”
+
+The application does this by combining multiple analytical agents that evaluate:
+
+* Market Structure
+* Liquidity Pools
+* Fair Value Gaps (FVGs)
+* Order Blocks (OBs)
+* Multi-Timeframe Confluence
+* Institutional Intent
+
+⸻
+
+Main Workflow
+
+Step 1: Select Market
+
+At the top of the dashboard choose:
+
+* Crypto
+* Forex
+
+Changing market type automatically updates the available symbols.
+
+⸻
+
+Step 2: Select Symbol
+
+Examples:
+
+Crypto:
+
+* BTCUSDT
+* ETHUSDT
+
+Forex:
+
+* EURUSD
+* GBPUSD
+
+The selected symbol becomes the focus of all agent analysis.
+
+⸻
+
+Step 3: Select Trading Style
+
+The Timeframe selector has four modes:
+
+Mode	Purpose
+Scalp	Very short-term liquidity draws
+Intraday	Same-day moves
+Swing	Multi-day directional bias
+All	Full market structure stack
+
+⸻
+
+Step 4: Review Multi-Timeframe Confluence
+
+This is the first thing traders should examine.
+
+The card displays:
+
+* Bullish Draw
+* Bearish Draw
+* Mixed Conditions
+
+Example:
+
+▲ BULLISH DRAW
+4↑ / 1↓
+
+Meaning:
+
+* 4 timeframes expect liquidity above
+* 1 timeframe expects liquidity below
+
+This indicates strong bullish alignment.
+
+Tap the card to open the intelligence panel.
+
+⸻
+
+Timeframe Agent Cards
+
+Each timeframe operates like its own analyst.
+
+Examples:
+
+* M5
+* M15
+* H1
+* H4
+
+Each card predicts:
+
+Next Draw On Liquidity
+
+Example:
+
+▲ 108,500
+
+Meaning:
+
+The model believes liquidity above current price is the highest probability target.
+
+⸻
+
+Confidence Score
+
+Example:
+
+Conf 82%
+
+Higher confidence means:
+
+* Better structure alignment
+* Stronger liquidity pools
+* More confluence between agents
+
+⸻
+
+Alternative Draw
+
+The system also provides:
+
+Alt Target
+
+This represents:
+
+The second-most likely liquidity objective.
+
+⸻
+
+Understanding The Agents
+
+The app uses several specialized agents.
+
+⸻
+
+Structure Agent
+
+Tracks:
+
+* MSS
+* BOS
+* Trend Bias
+
+Outputs:
+
+* Bullish
+* Bearish
+* Neutral
+
+Questions answered:
+
+* Who currently controls the market?
+* Has structure shifted?
+
+⸻
+
+Liquidity Agent
+
+Tracks:
+
+BSL
+
+Buy Side Liquidity
+
+Typically:
+
+* Equal highs
+* Swing highs
+* Obvious resistance
+
+⸻
+
+SSL
+
+Sell Side Liquidity
+
+Typically:
+
+* Equal lows
+* Swing lows
+* Obvious support
+
+Questions answered:
+
+* Where are stops resting?
+* Which liquidity pool is nearest?
+
+⸻
+
+Order Block Agent
+
+Tracks:
+
+* Bullish OBs
+* Bearish OBs
+
+Questions answered:
+
+* Where did institutions last accumulate?
+* Where may price retrace before continuation?
+
+⸻
+
+FVG Agent
+
+Tracks:
+
+* Bullish FVGs
+* Bearish FVGs
+
+Questions answered:
+
+* Where is imbalance?
+* Where might price seek rebalancing?
+
+⸻
+
+Timeframe Intelligence Panel
+
+When you tap a timeframe card, the app opens the Intelligence Sheet.
+
+This is the most powerful feature in the application.
+
+The panel is divided into sections.
+
+⸻
+
+1. Structure
+
+Shows:
+
+* Current bias
+* Last MSS
+* MSS price level
+
+Purpose:
+
+Understand current market control.
+
+⸻
+
+2. Liquidity Map
+
+Displays:
+
+BSL Above
+
+Potential upside liquidity targets.
+
+SSL Below
+
+Potential downside liquidity targets.
+
+Equal Highs
+
+Potential engineered target.
+
+Equal Lows
+
+Potential engineered target.
+
+⸻
+
+3. Imbalance Zones
+
+Displays:
+
+Bullish FVGs
+
+Areas where price may retrace before continuing upward.
+
+Bearish FVGs
+
+Areas where price may retrace before continuing downward.
+
+⸻
+
+4. Order Flow
+
+Displays:
+
+* BOS
+* MSS
+* Displacement
+
+Purpose:
+
+Reveal whether institutions are aggressively repricing.
+
+⸻
+
+5. Confidence Drivers
+
+Shows why the AI assigned its confidence score.
+
+Examples:
+
+* HTF alignment
+* Nearby liquidity
+* Strong displacement
+* Structure agreement
+
+This is your transparency layer.
+
+⸻
+
+Agent Pipeline (Live Reasoning)
+
+One of the most unique features.
+
+The application creates an internal conversation between agents.
+
+You can watch:
+
+* Structure Agent reasoning
+* Liquidity Agent reasoning
+* FVG Agent reasoning
+* Confluence Agent reasoning
+
+This exposes the logic behind the prediction.
+
+⸻
+
+Ask The Agents
+
+At the bottom of the Intelligence Sheet is a chat box.
+
+Example questions:
+
+* Why is the draw bearish?
+* Where is the strongest liquidity pool?
+* Which FVG is most important?
+* Is HTF aligned?
+* What invalidates this setup?
+
+The system then uses the current market context to answer.
+
+⸻
+
+Multi-Timeframe Confluence Intelligence
+
+This is effectively the “Chief Analyst.”
+
+It combines:
+
+* All timeframe reports
+* All liquidity maps
+* All structure analysis
+
+and produces:
+
+Dominant Direction
+
+Bullish
+
+Bearish
+
+Mixed
+
+⸻
+
+HTF → LTF Cascade
+
+Shows whether:
+
+Higher Timeframes and Lower Timeframes agree.
+
+This is one of the strongest concepts in ICT.
+
+⸻
+
+Session Context
+
+The app evaluates current market session.
+
+Examples:
+
+* Asian
+* London
+* New York
+
+and checks whether session behavior aligns with institutional intent.
+
+⸻
+
+Recommended Workflow (SMC Trader)
+
+For someone using your trading methodology, I would recommend:
+
+1. Select market and symbol.
+2. Open Confluence panel.
+3. Determine dominant liquidity draw.
+4. Check HTF → LTF alignment.
+5. Open highest-confidence timeframe.
+6. Review liquidity map.
+7. Review MSS/BOS.
+8. Review FVGs and OBs.
+9. Ask agents for confirmation.
+10. Build trade plan manually.
+
+The app should be treated as an institutional narrative engine, not a signal generator.
+
+⸻
+
+After a deeper audit of the remaining SMC engine files (buildReport, liquidity detection, MSS logic, FVG detection, OB detection, confidence scoring, and agent reasoning), I can ￼ produce a professional 30–50 page manual including the exact formulas and decision trees used by the system. That would effectively become the official documentation for SMC Pulse Predict.
