@@ -6,10 +6,18 @@ import { AgentChat } from "./AgentChat";
 
 type Market = "crypto" | "forex";
 
+const TF_LABEL_MAP: Record<string, string> = {
+  "1m": "M1", "5m": "M5", "15m": "M15",
+  "1h": "H1", "4h": "H4", "1d": "D1", "1w": "W1",
+};
+
 type Props = {
   report: SmcReport;
   market: Market;
   onClose: () => void;
+  anchorTf?: string;
+  anchorBias?: string;
+  role?: string;
 };
 
 function fmtPrice(p: number, market: Market): string {
@@ -157,7 +165,7 @@ function deriveSetup(report: SmcReport) {
   return { direction, entryLow, entryHigh, entrySource, stopLoss, slSource, tp1, tp2, rrRatio, checklist, passCount, grade };
 }
 
-export function IntelligenceSheet({ report, market, onClose }: Props) {
+export function IntelligenceSheet({ report, market, onClose, anchorTf, anchorBias, role }: Props) {
   const bias      = report.structure.bias !== "neutral" ? report.structure.bias : report.dailyBias.bias;
   const lastBreak = report.structure.breaks.slice(-1)[0];
   const liveOBs   = report.orderBlocks.filter(ob => ob.valid && !ob.isMitigated);
@@ -291,6 +299,27 @@ export function IntelligenceSheet({ report, market, onClose }: Props) {
 
             {/* ══ 0. Trade Setup Summary ══ */}
             <Section title="Trade Setup Summary" icon={Target}>
+              {/* Cascade context banner */}
+              {anchorTf && anchorBias && role && (
+                <div className={`flex items-center gap-2 px-3 py-2 rounded-sm border text-[11px] mb-2 ${
+                  role === "BIAS SETTER"
+                    ? "bg-primary/10 border-primary/30 text-primary"
+                    : bias === anchorBias
+                      ? "bg-[hsl(var(--bullish))]/8 border-[hsl(var(--bullish))]/25 text-[hsl(var(--bullish))]"
+                      : "bg-yellow-500/8 border-yellow-500/25 text-yellow-400"
+                }`}>
+                  <span className="font-bold uppercase tracking-wider">{role}</span>
+                  <span className="text-muted-foreground">·</span>
+                  {role === "BIAS SETTER" ? (
+                    <span>{TF_LABEL_MAP[report.timeframe] ?? report.timeframe.toUpperCase()} sets the direction for lower timeframes</span>
+                  ) : bias === anchorBias ? (
+                    <span>Confirms {TF_LABEL_MAP[anchorTf] ?? anchorTf} {anchorBias} bias ✓</span>
+                  ) : (
+                    <span>⚠ Counter-trend vs {TF_LABEL_MAP[anchorTf] ?? anchorTf} anchor ({anchorBias}) — higher risk</span>
+                  )}
+                </div>
+              )}
+
               {/* Grade badge + direction + copy */}
               <div className="flex items-center justify-between mb-1">
                 <div className="flex items-center gap-2">
