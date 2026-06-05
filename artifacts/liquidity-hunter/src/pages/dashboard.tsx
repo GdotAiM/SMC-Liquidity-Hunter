@@ -1,5 +1,6 @@
-import { useMemo, useState } from "react";
-import { Activity, AlertCircle, ChevronDown, ChevronUp, Minus, TrendingDown, TrendingUp, Zap } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { Activity, AlertCircle, ChevronDown, ChevronUp, Minus, RefreshCw, TrendingDown, TrendingUp, Zap } from "lucide-react";
 import {
   getAnalyzeCryptoQueryKey,
   getAnalyzeForexQueryKey,
@@ -248,12 +249,33 @@ function useTfData(market: Market, symbol: string, tf: Tf, corrSym: string | und
 
 /* ─── Dashboard ─── */
 export default function Dashboard() {
-  const [market,   setMarket]   = useState<Market>("crypto");
-  const [symbol,   setSymbol]   = useState("BTCUSDT");
-  const [corrSym,  setCorrSym]  = useState("ETHUSDT");
-  const [smtOn,    setSmtOn]    = useState(true);
-  const [styleIdx, setStyleIdx] = useState(1);
-  const [sheet,    setSheet]    = useState<{ tf: Tf; report: SmcReport } | null>(null);
+  const [market,      setMarket]      = useState<Market>("crypto");
+  const [symbol,      setSymbol]      = useState("BTCUSDT");
+  const [corrSym,     setCorrSym]     = useState("ETHUSDT");
+  const [smtOn,       setSmtOn]       = useState(true);
+  const [styleIdx,    setStyleIdx]    = useState(1);
+  const [sheet,       setSheet]       = useState<{ tf: Tf; report: SmcReport } | null>(null);
+  const [countdown,   setCountdown]   = useState(60);
+  const [refreshing,  setRefreshing]  = useState(false);
+
+  const queryClient = useQueryClient();
+
+  const doRefresh = useCallback(async () => {
+    setRefreshing(true);
+    setCountdown(60);
+    await queryClient.refetchQueries({ type: "active" });
+    setRefreshing(false);
+  }, [queryClient]);
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      setCountdown(prev => {
+        if (prev <= 1) { doRefresh(); return 60; }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(id);
+  }, [doRefresh]);
 
   const { data: symbols } = useListSymbols();
 
@@ -368,15 +390,47 @@ export default function Dashboard() {
             )}
           </div>
 
-          {/* Price */}
-          {primaryReport && (
-            <div className="ml-auto text-right">
-              <div className="text-base font-bold">{fmtPrice(primaryReport.currentPrice, market)}</div>
-              <div className="text-[10px] text-muted-foreground">
-                {symbol} · {new Date(primaryReport.generatedAt * 1000).toLocaleTimeString()}
+          {/* Auto-refresh ring */}
+          <div className="ml-auto flex items-center gap-3">
+            <button
+              onClick={doRefresh}
+              title={refreshing ? "Refreshing…" : `Auto-refresh in ${countdown}s — click to refresh now`}
+              className="relative flex items-center justify-center w-9 h-9 rounded-full border border-border hover:border-primary/60 transition-colors group"
+            >
+              {/* SVG countdown ring */}
+              <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 36 36" fill="none">
+                {/* track */}
+                <circle cx="18" cy="18" r="15" stroke="hsl(var(--border))" strokeWidth="2.5"/>
+                {/* progress arc */}
+                <circle
+                  cx="18" cy="18" r="15"
+                  stroke="hsl(var(--primary))"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeDasharray={`${2 * Math.PI * 15}`}
+                  strokeDashoffset={`${2 * Math.PI * 15 * (countdown / 60)}`}
+                  className="transition-[stroke-dashoffset] duration-1000 ease-linear"
+                />
+              </svg>
+              {/* center content */}
+              <span className="relative z-10 text-[10px] font-bold text-primary tabular-nums leading-none">
+                {refreshing
+                  ? <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  : countdown
+                }
+              </span>
+            </button>
+
+            {/* Price */}
+            {primaryReport && (
+              <div className="text-right">
+                <div className="text-base font-bold">{fmtPrice(primaryReport.currentPrice, market)}</div>
+                <div className="text-[10px] text-muted-foreground">
+                  {symbol} · {new Date(primaryReport.generatedAt * 1000).toLocaleTimeString()}
+                </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </header>
 
