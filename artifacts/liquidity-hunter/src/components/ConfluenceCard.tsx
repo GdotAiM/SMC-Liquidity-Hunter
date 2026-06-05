@@ -24,6 +24,7 @@ type Props = {
   reports: Array<{ tf: string; report: SmcReport }>;
   cascade: CascadeInfo;
   onSelect: (tf: string) => void;
+  onOpenConfluence: () => void;
 };
 
 function getBias(report: SmcReport): string {
@@ -38,7 +39,7 @@ function fmtP(price: number): string {
   return price.toFixed(6);
 }
 
-export function ConfluenceCard({ reports, cascade, onSelect }: Props) {
+export function ConfluenceCard({ reports, cascade, onSelect, onOpenConfluence }: Props) {
   if (reports.length === 0) return null;
 
   /* Sort high → low for cascade display */
@@ -82,15 +83,12 @@ export function ConfluenceCard({ reports, cascade, onSelect }: Props) {
 
   const Icon = anchorBias === "bullish" ? TrendingUp : anchorBias === "bearish" ? TrendingDown : Minus;
 
-  /* Best TF to open on headline click = anchor */
-  const bestTf = anchorTf;
-
   return (
     <div className={`rounded-sm border ${border} bg-gradient-to-br ${grad} overflow-hidden`}>
 
       {/* ── Headline ── */}
       <button
-        onClick={() => onSelect(bestTf)}
+        onClick={onOpenConfluence}
         className="w-full text-left px-4 pt-4 pb-3 hover:bg-white/3 active:bg-white/5 transition-colors group"
       >
         <div className="flex items-center justify-between mb-3">

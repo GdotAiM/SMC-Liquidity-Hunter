@@ -10,6 +10,7 @@ import {
   useListSymbols,
 } from "@workspace/api-client-react";
 import { ConfluenceCard } from "@/components/ConfluenceCard";
+import { ConfluenceSheet } from "@/components/ConfluenceSheet";
 import { IntelligenceSheet } from "@/components/IntelligenceSheet";
 
 type Market = "crypto" | "forex";
@@ -254,7 +255,8 @@ export default function Dashboard() {
   const [corrSym,     setCorrSym]     = useState("ETHUSDT");
   const [smtOn,       setSmtOn]       = useState(true);
   const [styleIdx,    setStyleIdx]    = useState(1);
-  const [sheet,       setSheet]       = useState<{ tf: Tf; report: SmcReport } | null>(null);
+  const [sheet,             setSheet]             = useState<{ tf: Tf; report: SmcReport } | null>(null);
+  const [confluenceSheetOpen, setConfluenceSheetOpen] = useState(false);
   const [countdown,   setCountdown]   = useState(60);
   const [refreshing,  setRefreshing]  = useState(false);
 
@@ -442,6 +444,7 @@ export default function Dashboard() {
           <ConfluenceCard
             reports={confluenceReports}
             cascade={cascade}
+            onOpenConfluence={() => setConfluenceSheetOpen(true)}
             onSelect={tf => {
               const found = confluenceReports.find(r => r.tf === tf);
               if (found) setSheet({ tf: found.tf as Tf, report: found.report });
@@ -546,7 +549,17 @@ export default function Dashboard() {
         )}
       </main>
 
-      {/* Intelligence Sheet */}
+      {/* Multi-TF Confluence Sheet */}
+      {confluenceSheetOpen && confluenceReports.length > 0 && (
+        <ConfluenceSheet
+          reports={confluenceReports}
+          cascade={cascade}
+          market={market}
+          onClose={() => setConfluenceSheetOpen(false)}
+        />
+      )}
+
+      {/* Single-TF Intelligence Sheet */}
       {sheet && (
         <IntelligenceSheet
           report={sheet.report}
