@@ -1,0 +1,352 @@
+You are acting as a senior ICT (Inner Circle Trader) algorithmic trader, quantitative researcher, TypeScript architect, and AI software engineer.
+
+You are working on an existing production-quality TypeScript monorepo called SMC Liquidity Hunter.
+
+IMPORTANT:
+
+* Do NOT rewrite the project.
+* Preserve the existing architecture.
+* Preserve all public APIs and TypeScript types wherever possible.
+* Make targeted improvements only.
+* Maintain backward compatibility.
+* Do not introduce breaking changes.
+* Keep the project hackathon-ready and easy to understand.
+
+The current pipeline is:
+
+Market Data
+→ Structure
+→ Liquidity
+→ Order Blocks
+→ Fair Value Gaps
+→ PD Arrays
+→ Daily Bias
+→ SMT
+→ Draw Targets
+→ AI Agents
+
+The goal is to transform the engine from an SMC detector into an institutional-quality market intelligence system while keeping the existing modular architecture.
+
+PART 1 — Fix correctness bugs
+
+Fix the following implementation issues.
+
+Structure
+
+Remove candle colour filtering from pivot detection.
+
+Current behaviour incorrectly requires bullish candles for swing highs and bearish candles for swing lows.
+
+ICT pivots depend only on market structure.
+
+Replace
+
+if (isHigh && bullish)
+
+with
+
+if (isHigh)
+
+and
+
+if (isLow && bearish)
+
+with
+
+if (isLow)
+
+Order Blocks
+
+Bullish order blocks should use:
+
+proximal = candle.open
+
+instead of
+
+proximal = candle.close
+
+Maintain bearish OB behaviour.
+
+Ensure mitigation and breaker logic still works correctly.
+
+Improve trend detection
+
+Instead of relying primarily on weighted pivot ratios, create a structure narrative.
+
+Maintain existing outputs but internally classify phases such as:
+
+Accumulation
+
+Manipulation
+
+Expansion
+
+Distribution
+
+Continuation
+
+Use BOS, CHoCH, displacement and liquidity sweeps to infer these phases.
+
+Do not remove the existing trend or bias outputs.
+
+Instead enhance them.
+
+— Improve liquidity intelligence
+
+Keep the current liquidity scoring.
+
+Enhance it by adding probability estimation.
+
+Each liquidity pool should include something similar to:
+
+probabilityOfSweep
+
+expressed from 0–1.
+
+Factors should include:
+
+distance from current price
+
+higher timeframe bias
+
+recent displacement
+
+session weighting
+
+recency
+
+number of touches
+
+nearby order blocks
+
+nearby FVGs
+
+whether opposing liquidity has already been taken
+
+Keep the existing score field.
+
+Probability is an additional field.
+
+— Improve order block ranking
+
+Instead of treating every valid order block equally, create confidence tiers.
+
+Increase confidence when:
+
+aligned with HTF bias
+
+contains nearby FVG
+
+caused BOS
+
+caused CHoCH
+
+near liquidity sweep
+
+not mitigated
+
+fresh
+
+recent
+
+Decrease confidence when:
+
+multiple mitigations
+
+old
+
+breaker
+
+counter-trend
+
+Return a confidence value between 0 and 1.
+
+— Improve draw target ranking
+
+Currently liquidity dominates ranking.
+
+Improve ranking by rewarding confluence.
+
+For example:
+
+Liquidity
+
+Order Block
+
+FVG
+
+PD Discount/Premium
+
+HTF Bias
+
+SMT
+
+should outrank a standalone liquidity pool.
+
+Keep the existing draw target interface.
+
+Improve only the scoring algorithm.
+
+— Improve SMT
+
+Current SMT confidence ignores divergence magnitude.
+
+Improve confidence using:
+
+price difference
+
+percentage difference
+
+relative swing size
+
+time alignment
+
+Reject very weak SMTs.
+
+Keep the existing API.
+
+— Daily bias
+
+Reduce dependence on SMA.
+
+Bias should primarily come from:
+
+market structure
+
+premium/discount
+
+dealing range
+
+higher timeframe swing direction
+
+Only use SMA as a weak secondary confirmation.
+
+— Session state
+
+Instead of only labelling sessions, infer session state.
+
+Possible states include:
+
+Asian accumulation
+
+London liquidity sweep
+
+London expansion
+
+NY retracement
+
+NY continuation
+
+PM distribution
+
+Expose this as metadata without breaking existing APIs.
+
+— Market narrative
+
+Create a function that summarises the current market story.
+
+Example:
+
+“Daily bullish.
+
+London swept SSL.
+
+Bullish displacement confirmed.
+
+Price returned into bullish order block inside discount.
+
+Nearest objective is buy-side liquidity above yesterday’s high.”
+
+This narrative should be generated algorithmically.
+
+It will later be passed into the AI agents.
+
+PART 10 — AI improvements
+
+Keep the existing multi-agent architecture.
+
+Improve prompts so each agent has a specialised role.
+
+Structure Agent
+
+Only analyses structure.
+
+Liquidity Agent
+
+Only analyses liquidity objectives.
+
+Execution Agent
+
+Only identifies entries and invalidation.
+
+Risk Agent
+
+Evaluates confidence and trade quality.
+
+Confluence Agent
+
+Produces the final recommendation.
+
+Avoid overlap between agents.
+
+— Performance
+
+Add a lightweight in-memory TTL cache.
+
+Cache OHLCV responses for 60 seconds.
+
+Use symbol + timeframe + market as the cache key.
+
+Do not add Redis.
+
+Do not add external infrastructure.
+
+— Explainable AI
+
+Every confidence score should include reasons.
+
+For example:
+
+confidence: 0.91
+
+evidence:
+
+✓ HTF bullish
+
+✓ London sweep
+
+✓ Bullish OB
+
+✓ Discount
+
+✓ FVG confluence
+
+✓ Unswept BSL
+
+Do this wherever practical.
+
+PART 13 — Code quality
+
+Maintain strict typing.
+
+Avoid duplicated logic.
+
+Extract reusable scoring functions.
+
+Improve naming where appropriate.
+
+Add comments explaining ICT reasoning rather than programming syntax.
+
+IMPORTANT
+
+Before making changes:
+
+1. Analyse the entire project.
+2. Identify where each improvement belongs.
+3. Reuse existing code wherever possible.
+4. Avoid unnecessary rewrites.
+5. Preserve all current functionality.
+6. Keep the project compiling.
+7. Produce production-quality TypeScript.
+
+The objective is to evolve this into an institutional-grade AI market intelligence engine rather than simply an SMC indicator.

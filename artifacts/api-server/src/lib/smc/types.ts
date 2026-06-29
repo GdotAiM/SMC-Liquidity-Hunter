@@ -29,6 +29,12 @@ export interface StructureResult {
   confidence: number;
   pivots: StructurePoint[];
   breaks: StructureBreak[];
+  /** ICT market phase inferred from BOS/CHoCH patterns */
+  phase: "accumulation" | "manipulation" | "expansion" | "distribution" | "continuation" | "unknown";
+  /** Human-readable structure narrative */
+  narrative: string;
+  /** Evidence bullets that explain the bias/confidence */
+  evidence: string[];
 }
 
 export interface LiquidityPool {
@@ -41,6 +47,8 @@ export interface LiquidityPool {
   time: number;
   index: number;
   session: string | null;
+  /** 0–1 probability this pool will be swept in the near future */
+  probabilityOfSweep: number;
 }
 
 export interface LiquidityResult {
@@ -60,6 +68,10 @@ export interface OrderBlock {
   isBreaker: boolean;
   strength: number;
   hasFvg: boolean;
+  /** 0–1 institutional confidence in this OB */
+  confidence: number;
+  /** Factors that drove confidence up or down */
+  confidenceFactors: string[];
 }
 
 export interface FairValueGap {
@@ -98,6 +110,8 @@ export interface DailyBiasResult {
   strength: number;
   consecutiveDays: number;
   referencedSwing: string | null;
+  /** Evidence bullets explaining the daily bias */
+  evidence: string[];
 }
 
 export interface SmtDivergence {
@@ -115,6 +129,8 @@ export interface DrawTarget {
   score: number;
   direction: "long" | "short";
   label: string;
+  /** Confluence factors that raised this target's ranking */
+  evidence: string[];
 }
 
 export interface SmcReport {
@@ -132,6 +148,10 @@ export interface SmcReport {
   dailyBias: DailyBiasResult;
   smt: SmtDivergence;
   draw: DrawTarget[];
+  /** Full market narrative for AI agents and UI display */
+  narrative: string;
+  /** Current session state e.g. "London Expansion Bullish" */
+  sessionState: string;
 }
 
 export type Market = "crypto" | "forex";

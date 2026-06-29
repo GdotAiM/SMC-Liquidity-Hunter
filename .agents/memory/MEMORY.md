@@ -1,0 +1,1 @@
+- [ICT engine architecture](ict-engine.md) — all SMC engine files, their key correctness fixes, and which new fields each module adds
