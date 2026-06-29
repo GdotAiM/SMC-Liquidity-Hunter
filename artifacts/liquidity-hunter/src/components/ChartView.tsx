@@ -1,15 +1,18 @@
 import { useEffect, useRef, useCallback, useState } from "react";
 import {
   createChart,
+  CandlestickSeries,
   ColorType,
   LineStyle,
   CrosshairMode,
+  createSeriesMarkers,
 } from "lightweight-charts";
-import type { IChartApi } from "lightweight-charts";
+import type { IChartApi, ISeriesApi, SeriesType } from "lightweight-charts";
 import type { SmcReport } from "@workspace/api-client-react";
 import { X } from "lucide-react";
 
 type Market = "crypto" | "forex";
+type CandleSeries = ISeriesApi<SeriesType>;
 
 // ── Session colour config ──────────────────────────────────────────────────────
 
@@ -17,8 +20,8 @@ const SESSION_CONFIG: Record<
   string,
   { fill: string; label: string; labelColor: string }
 > = {
-  Asian:       { fill: "rgba(100,160,255,0.05)", label: "Asian",       labelColor: "rgba(140,190,255,0.85)" },
-  London:      { fill: "rgba(255,165,80,0.05)",  label: "London",      labelColor: "rgba(255,185,110,0.85)" },
+  Asian:         { fill: "rgba(100,160,255,0.05)", label: "Asian",       labelColor: "rgba(140,190,255,0.85)" },
+  London:        { fill: "rgba(255,165,80,0.05)",  label: "London",      labelColor: "rgba(255,185,110,0.85)" },
   "New York AM": { fill: "rgba(100,220,160,0.05)", label: "New York AM", labelColor: "rgba(120,220,160,0.85)" },
   "New York PM": { fill: "rgba(200,100,220,0.04)", label: "New York PM", labelColor: "rgba(210,130,225,0.85)" },
 };
@@ -65,7 +68,7 @@ function priceDecimals(price: number, market: Market): number {
 function drawOverlay(
   canvas: HTMLCanvasElement,
   chart: IChartApi,
-  series: ReturnType<IChartApi["addCandlestickSeries"]>,
+  series: CandleSeries,
   rep: SmcReport,
   market: Market,
 ) {
@@ -90,18 +93,14 @@ function drawOverlay(
   for (const s of sessions) {
     const cfg = SESSION_CONFIG[s.name];
     if (!cfg) continue;
-
     const x1 = xOf(s.start);
     const x2 = xOf(s.end);
     if (x1 === null || x2 === null) continue;
-
     const rx1 = Math.max(0, x1);
     const rx2 = Math.min(W, x2 + 24);
     if (rx2 <= rx1) continue;
-
     ctx.fillStyle = cfg.fill;
     ctx.fillRect(rx1, 0, rx2 - rx1, H);
-
     if (s.name !== lastLabel) {
       ctx.fillStyle = cfg.labelColor;
       ctx.font = "10px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
@@ -114,33 +113,24 @@ function drawOverlay(
   for (const fvg of rep.fvg.filter(g => g.fillFraction < 0.5)) {
     const x1 = xOf(fvg.time);
     if (x1 === null) continue;
-
     const y1 = yOf(fvg.top);
     const y2 = yOf(fvg.bottom);
     if (y1 === null || y2 === null) continue;
-
     const isBull = fvg.type === "bullish";
-    const top    = Math.min(y1, y2);
-    const boxH   = Math.abs(y2 - y1);
+    const top  = Math.min(y1, y2);
+    const boxH = Math.abs(y2 - y1);
     if (boxH < 1) continue;
 
-    // Filled rectangle (extends to right edge)
     ctx.fillStyle = isBull ? "rgba(66,153,225,0.11)" : "rgba(237,100,166,0.11)";
     ctx.fillRect(x1, top, W - x1, boxH);
-
-    // Dashed border
     ctx.strokeStyle = isBull ? "rgba(66,153,225,0.45)" : "rgba(237,100,166,0.45)";
     ctx.lineWidth = 0.7;
     ctx.setLineDash([3, 3]);
     ctx.strokeRect(x1, top, W - x1, boxH);
     ctx.setLineDash([]);
-
-    // "FVG" label
     ctx.fillStyle = isBull ? "rgba(66,153,225,0.9)" : "rgba(237,100,166,0.9)";
     ctx.font = "bold 9px 'JetBrains Mono', monospace";
     if (boxH > 9) ctx.fillText("FVG", x1 + 3, top + 10);
-
-    // Inversion marker
     if (fvg.isInversion) {
       ctx.fillStyle = "rgba(236,201,75,0.7)";
       ctx.font = "8px monospace";
@@ -148,27 +138,20 @@ function drawOverlay(
     }
   }
 
-  // ── Order Block rectangles ────────────────────────────────────────────────────
+  // ── Order Block rectangles ───────────────────────────────────────────────────
   for (const ob of rep.orderBlocks.filter(o => o.valid && !o.isMitigated)) {
     const x1 = xOf(ob.time);
     if (x1 === null) continue;
-
-    const priceHi = Math.max(ob.proximal, ob.distal);
-    const priceLo = Math.min(ob.proximal, ob.distal);
-    const y1 = yOf(priceHi);
-    const y2 = yOf(priceLo);
+    const y1 = yOf(Math.max(ob.proximal, ob.distal));
+    const y2 = yOf(Math.min(ob.proximal, ob.distal));
     if (y1 === null || y2 === null) continue;
-
     const isBull = ob.type === "bullish";
     const top  = Math.min(y1, y2);
     const boxH = Math.abs(y2 - y1);
     if (boxH < 1) continue;
 
-    // Box fill
     ctx.fillStyle = isBull ? "rgba(38,166,154,0.14)" : "rgba(239,83,80,0.14)";
     ctx.fillRect(x1, top, W - x1, boxH);
-
-    // Box border (solid, 1px)
     ctx.strokeStyle = isBull ? "rgba(38,166,154,0.6)" : "rgba(239,83,80,0.6)";
     ctx.lineWidth = 0.8;
     ctx.setLineDash([]);
@@ -178,16 +161,14 @@ function drawOverlay(
     const yProx = yOf(ob.proximal);
     if (yProx !== null) {
       ctx.strokeStyle = isBull ? "rgba(38,166,154,0.85)" : "rgba(239,83,80,0.85)";
-      ctx.lineWidth   = 0.9;
+      ctx.lineWidth = 0.9;
       ctx.setLineDash([4, 3]);
       ctx.beginPath();
       ctx.moveTo(x1, yProx);
       ctx.lineTo(W, yProx);
       ctx.stroke();
       ctx.setLineDash([]);
-
-      // KZO label near right edge
-      const decs = priceDecimals(ob.proximal, market);
+      const decs  = priceDecimals(ob.proximal, market);
       const label = `KZO(${ob.proximal.toFixed(decs)})`;
       ctx.fillStyle = isBull ? "rgba(38,166,154,0.9)" : "rgba(239,83,80,0.9)";
       ctx.font = "8.5px 'JetBrains Mono', monospace";
@@ -195,28 +176,27 @@ function drawOverlay(
       ctx.fillText(label, W - tw - 4, yProx - 2.5);
     }
 
-    // "OB" label top-left of box
-    ctx.fillStyle = isBull ? "rgba(38,166,154,0.95)" : "rgba(239,83,80,0.95)";
-    ctx.font = "bold 10px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
-    if (boxH > 12) ctx.fillText("OB", x1 + 4, top + 12);
-
-    // Confidence badge (top-right of box)
-    if (ob.confidence != null && boxH > 12) {
-      const confText = `${Math.round(ob.confidence * 100)}%`;
-      ctx.font = "8px monospace";
-      ctx.fillStyle = isBull ? "rgba(38,166,154,0.7)" : "rgba(239,83,80,0.7)";
-      const cw = ctx.measureText(confText).width;
-      ctx.fillText(confText, W - cw - 5, top + 12);
+    // "OB" label + confidence
+    if (boxH > 12) {
+      ctx.fillStyle = isBull ? "rgba(38,166,154,0.95)" : "rgba(239,83,80,0.95)";
+      ctx.font = "bold 10px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+      ctx.fillText("OB", x1 + 4, top + 12);
+      if (ob.confidence != null) {
+        const confText = `${Math.round(ob.confidence * 100)}%`;
+        ctx.font = "8px monospace";
+        ctx.fillStyle = isBull ? "rgba(38,166,154,0.7)" : "rgba(239,83,80,0.7)";
+        const cw = ctx.measureText(confText).width;
+        ctx.fillText(confText, W - cw - 5, top + 12);
+      }
     }
   }
 
-  // ── BOS/CHoCH horizontal lines ───────────────────────────────────────────────
+  // ── BOS/CHoCH horizontal dashed lines ────────────────────────────────────────
   for (const b of rep.structure.breaks.slice(-8)) {
     const xB = xOf(b.time);
     if (xB === null) continue;
     const yB = yOf(b.price);
     if (yB === null) continue;
-
     const isBOS = b.type === "BOS";
     ctx.strokeStyle = isBOS ? "rgba(66,153,225,0.35)" : "rgba(236,201,75,0.35)";
     ctx.lineWidth = 0.7;
@@ -226,8 +206,6 @@ function drawOverlay(
     ctx.lineTo(W, yB);
     ctx.stroke();
     ctx.setLineDash([]);
-
-    // CHoCH text label
     if (!isBOS) {
       ctx.fillStyle = "rgba(236,201,75,0.85)";
       ctx.font = "9px monospace";
@@ -261,7 +239,7 @@ export function ChartView({ reports, market, initialTf, onClose }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef    = useRef<HTMLCanvasElement>(null);
   const chartRef     = useRef<IChartApi | null>(null);
-  const seriesRef    = useRef<ReturnType<IChartApi["addCandlestickSeries"]> | null>(null);
+  const seriesRef    = useRef<CandleSeries | null>(null);
   const reportRef    = useRef<SmcReport | null>(null);
 
   const activeReport = reports.find(r => r.tf === activeTf)?.report ?? null;
@@ -282,7 +260,6 @@ export function ChartView({ reports, market, initialTf, onClose }: Props) {
     const W   = container.clientWidth;
     const H   = container.clientHeight;
 
-    // Size canvas
     canvas.width        = W * dpr;
     canvas.height       = H * dpr;
     canvas.style.width  = `${W}px`;
@@ -306,14 +283,11 @@ export function ChartView({ reports, market, initialTf, onClose }: Props) {
         vertLine: { color: "#555", labelBackgroundColor: "#1f1f1f" },
         horzLine: { color: "#555", labelBackgroundColor: "#1f1f1f" },
       },
-      rightPriceScale: {
-        borderColor: "#2a2a2a",
-        textColor:   "#777",
-      },
+      rightPriceScale: { borderColor: "#2a2a2a", textColor: "#777" },
       timeScale: {
-        borderColor:    "#2a2a2a",
-        textColor:      "#777",
-        timeVisible:    true,
+        borderColor: "#2a2a2a",
+        textColor: "#777",
+        timeVisible: true,
         secondsVisible: false,
       },
       handleScroll: true,
@@ -322,8 +296,8 @@ export function ChartView({ reports, market, initialTf, onClose }: Props) {
 
     chartRef.current = chart;
 
-    // ── Candlestick series ──────────────────────────────────────────────────
-    const series = chart.addCandlestickSeries({
+    // ── Candlestick series (v5 API) ─────────────────────────────────────────
+    const series = chart.addSeries(CandlestickSeries, {
       upColor:       "#26a69a",
       downColor:     "#ef5350",
       borderVisible: false,
@@ -332,51 +306,44 @@ export function ChartView({ reports, market, initialTf, onClose }: Props) {
     });
     seriesRef.current = series;
 
-    // Candle data (sorted)
+    // Candle data
     series.setData(
       [...rep.candles]
         .sort((a, b) => a.time - b.time)
-        .map(c => ({
-          time: c.time as never,
-          open: c.open, high: c.high, low: c.low, close: c.close,
-        })),
+        .map(c => ({ time: c.time as never, open: c.open, high: c.high, low: c.low, close: c.close })),
     );
 
     // ── Price lines ─────────────────────────────────────────────────────────
-
-    // BSL pools
     const bslPools = rep.liquidity.pools
       .filter(p => p.type === "BSL" && !p.wasSwept && p.price > rep.currentPrice)
       .sort((a, b) => a.price - b.price);
 
     bslPools.forEach((p, i) => {
       series.createPriceLine({
-        price:             p.price,
-        color:             i === 0 ? "rgba(38,166,154,0.9)" : "rgba(38,166,154,0.3)",
-        lineWidth:         i === 0 ? 1 : 1,
-        lineStyle:         i === 0 ? LineStyle.Dashed : LineStyle.Dotted,
-        axisLabelVisible:  i === 0,
-        title:             i === 0 ? `BSL  ${p.touches}×` : "",
+        price:            p.price,
+        color:            i === 0 ? "rgba(38,166,154,0.9)" : "rgba(38,166,154,0.3)",
+        lineWidth:        1,
+        lineStyle:        i === 0 ? LineStyle.Dashed : LineStyle.Dotted,
+        axisLabelVisible: i === 0,
+        title:            i === 0 ? `BSL  ${p.touches}×` : "",
       });
     });
 
-    // SSL pools
     const sslPools = rep.liquidity.pools
       .filter(p => p.type === "SSL" && !p.wasSwept && p.price < rep.currentPrice)
       .sort((a, b) => b.price - a.price);
 
     sslPools.forEach((p, i) => {
       series.createPriceLine({
-        price:             p.price,
-        color:             i === 0 ? "rgba(239,83,80,0.9)" : "rgba(239,83,80,0.3)",
-        lineWidth:         i === 0 ? 1 : 1,
-        lineStyle:         i === 0 ? LineStyle.Dashed : LineStyle.Dotted,
-        axisLabelVisible:  i === 0,
-        title:             i === 0 ? `SSL  ${p.touches}×` : "",
+        price:            p.price,
+        color:            i === 0 ? "rgba(239,83,80,0.9)" : "rgba(239,83,80,0.3)",
+        lineWidth:        1,
+        lineStyle:        i === 0 ? LineStyle.Dashed : LineStyle.Dotted,
+        axisLabelVisible: i === 0,
+        title:            i === 0 ? `SSL  ${p.touches}×` : "",
       });
     });
 
-    // Equilibrium
     series.createPriceLine({
       price: rep.pdArray.equilibrium,
       color: "rgba(120,120,200,0.35)",
@@ -386,8 +353,7 @@ export function ChartView({ reports, market, initialTf, onClose }: Props) {
       title: "EQ",
     });
 
-    // ── Markers ─────────────────────────────────────────────────────────────
-    // Pivot labels (HH/HL/LH/LL)
+    // ── Markers (v5 API: createSeriesMarkers) ───────────────────────────────
     const pivotMarkers = rep.structure.pivots
       .filter(p => p.confirmed)
       .slice(-10)
@@ -400,7 +366,6 @@ export function ChartView({ reports, market, initialTf, onClose }: Props) {
         size:     0.4,
       }));
 
-    // BOS / CHoCH arrows
     const breakMarkers = rep.structure.breaks
       .slice(-8)
       .map(b => ({
@@ -412,7 +377,6 @@ export function ChartView({ reports, market, initialTf, onClose }: Props) {
         size:     0.7,
       }));
 
-    // SMT divergence marker
     if (rep.smt?.detected && rep.smt.time) {
       breakMarkers.push({
         time:     rep.smt.time as never,
@@ -424,16 +388,14 @@ export function ChartView({ reports, market, initialTf, onClose }: Props) {
       });
     }
 
-    // Merge & sort by time
     const allMarkers = [...pivotMarkers, ...breakMarkers]
       .sort((a, b) => (a.time as number) - (b.time as number));
 
-    series.setMarkers(allMarkers);
+    // v5: use createSeriesMarkers() instead of series.setMarkers()
+    createSeriesMarkers(series, allMarkers);
 
-    // ── Canvas overlay subscriptions ────────────────────────────────────────
+    // ── Subscribe to redraw canvas on scroll/zoom ────────────────────────────
     chart.timeScale().subscribeVisibleTimeRangeChange(() => redraw());
-
-    // Initial draw after layout settles
     setTimeout(redraw, 80);
 
     // ── Resize observer ─────────────────────────────────────────────────────
@@ -456,7 +418,6 @@ export function ChartView({ reports, market, initialTf, onClose }: Props) {
       chartRef.current  = null;
       seriesRef.current = null;
     };
-  // Re-run whenever active report or market changes
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeReport, market, redraw]);
 
@@ -466,7 +427,7 @@ export function ChartView({ reports, market, initialTf, onClose }: Props) {
     return (
       <div className="fixed inset-0 z-50 bg-background flex items-center justify-center">
         <div className="text-center space-y-2">
-          <p className="text-muted-foreground text-sm">No data loaded for {activeTf}</p>
+          <p className="text-muted-foreground text-sm">No data for {activeTf}</p>
           <button onClick={onClose} className="text-xs text-primary underline">Close</button>
         </div>
       </div>
@@ -484,8 +445,6 @@ export function ChartView({ reports, market, initialTf, onClose }: Props) {
 
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <div className="flex items-center gap-3 px-4 py-2 border-b border-[#1f1f1f] bg-[#111]/95 shrink-0">
-
-        {/* Symbol + price */}
         <div className="flex items-center gap-2">
           <span className="text-sm font-bold text-foreground">{activeReport.symbol}</span>
           <span className={`text-[10px] px-1.5 py-0.5 rounded-sm font-bold uppercase border ${biasColor}`}>
@@ -513,25 +472,18 @@ export function ChartView({ reports, market, initialTf, onClose }: Props) {
           ))}
         </div>
 
-        {/* Narrative */}
         {activeReport.narrative && (
           <span className="text-[10px] text-[#555] hidden lg:block flex-1 truncate">
             {activeReport.narrative}
           </span>
         )}
-
-        {/* Session state */}
         {activeReport.sessionState && (
           <span className="text-[10px] text-primary/70 hidden md:block whitespace-nowrap">
             {activeReport.sessionState}
           </span>
         )}
 
-        {/* Close */}
-        <button
-          onClick={onClose}
-          className="ml-auto p-1.5 hover:bg-[#1f1f1f] rounded-sm transition-colors"
-        >
+        <button onClick={onClose} className="ml-auto p-1.5 hover:bg-[#1f1f1f] rounded-sm transition-colors">
           <X className="w-4 h-4 text-[#555]" />
         </button>
       </div>
@@ -551,9 +503,9 @@ export function ChartView({ reports, market, initialTf, onClose }: Props) {
         {[
           { color: "rgba(38,166,154,0.8)", label: "BSL ─ ─" },
           { color: "rgba(239,83,80,0.8)",  label: "SSL ─ ─" },
-          { color: "#4299e1",               label: "BOS ▲" },
-          { color: "#ecc94b",               label: "CHoCH ◆" },
-          { color: "#a855f7",               label: "SMT ⚡" },
+          { color: "#4299e1",              label: "BOS ▲" },
+          { color: "#ecc94b",              label: "CHoCH ◆" },
+          { color: "#a855f7",              label: "SMT ⚡" },
         ].map(({ color, label }) => (
           <div key={label} className="flex items-center gap-1 shrink-0">
             <span className="text-[10px] font-bold" style={{ color }}>{label}</span>
@@ -568,10 +520,7 @@ export function ChartView({ reports, market, initialTf, onClose }: Props) {
       {/* ── Chart area ─────────────────────────────────────────────────────── */}
       <div className="flex-1 relative overflow-hidden">
         <div ref={containerRef} className="w-full h-full" />
-        <canvas
-          ref={canvasRef}
-          className="absolute inset-0 pointer-events-none"
-        />
+        <canvas ref={canvasRef} className="absolute inset-0 pointer-events-none" />
       </div>
     </div>
   );
