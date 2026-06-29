@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Activity, AlertCircle, ChevronDown, ChevronUp, Minus, RefreshCw, TrendingDown, TrendingUp, Zap } from "lucide-react";
+import { Activity, AlertCircle, BarChart2, ChevronDown, ChevronUp, Minus, RefreshCw, TrendingDown, TrendingUp, Zap } from "lucide-react";
 import {
   getAnalyzeCryptoQueryKey,
   getAnalyzeForexQueryKey,
@@ -12,6 +12,7 @@ import {
 import { ConfluenceCard } from "@/components/ConfluenceCard";
 import { ConfluenceSheet } from "@/components/ConfluenceSheet";
 import { IntelligenceSheet } from "@/components/IntelligenceSheet";
+import { ChartView } from "@/components/ChartView";
 
 type Market = "crypto" | "forex";
 
@@ -257,6 +258,7 @@ export default function Dashboard() {
   const [styleIdx,    setStyleIdx]    = useState(1);
   const [sheet,             setSheet]             = useState<{ tf: Tf; report: SmcReport } | null>(null);
   const [confluenceSheetOpen, setConfluenceSheetOpen] = useState(false);
+  const [chartOpen,   setChartOpen]   = useState(false);
   const [countdown,   setCountdown]   = useState(60);
   const [refreshing,  setRefreshing]  = useState(false);
 
@@ -391,6 +393,16 @@ export default function Dashboard() {
               </select>
             )}
           </div>
+
+          {/* Chart view button */}
+          <button
+            onClick={() => setChartOpen(true)}
+            title="Open visual chart"
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-sm border border-border bg-muted text-muted-foreground hover:text-primary hover:border-primary/50 transition-colors text-xs font-bold"
+          >
+            <BarChart2 className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">CHART</span>
+          </button>
 
           {/* Auto-refresh ring */}
           <div className="ml-auto flex items-center gap-3">
@@ -568,6 +580,16 @@ export default function Dashboard() {
           anchorBias={cascade.anchorBias}
           role={cascade.roles[sheet.tf]}
           onClose={() => setSheet(null)}
+        />
+      )}
+
+      {/* Visual Chart Panel */}
+      {chartOpen && confluenceReports.length > 0 && (
+        <ChartView
+          reports={confluenceReports}
+          market={market}
+          initialTf={cascade.anchorTf}
+          onClose={() => setChartOpen(false)}
         />
       )}
     </div>
