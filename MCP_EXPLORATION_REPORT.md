@@ -3,7 +3,7 @@
 > **Date:** 2026-06-30  
 > **Goal:** Identify MCP (Model Context Protocol) options that integrate seamlessly with the existing real-time WebSocket infrastructure, SMC engine, and AI analyst to make the platform more reliable, agentic, and action-capable.
 >
-> **📌 Implementation:** This exploration led to the Tier 3 MCP implementation — see [`MCP_TIER3_IMPLEMENTATION.md`](./MCP_TIER3_IMPLEMENTATION.md) for what was actually built (FastMCP v4.3.2, 11 tools, 2 resources, 1 prompt).
+> **📌 Implementation:** This exploration led to the Tier 3 MCP implementation — see [`MCP_TIER3_IMPLEMENTATION.md`](./MCP_TIER3_IMPLEMENTATION.md) for the build report and [`docs/MCP_CHAT_CAPABILITIES.md`](./docs/MCP_CHAT_CAPABILITIES.md) for a complete capabilities reference (FastMCP v4.3.2, 11 tools, 2 resources, 1 prompt, frontend UX).
 
 ---
 

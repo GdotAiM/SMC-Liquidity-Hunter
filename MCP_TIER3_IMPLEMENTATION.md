@@ -6,6 +6,7 @@
 > **Model:** DeepSeek V4 Pro (Fireworks AI)
 
 > **📚 Related documents:**
+> - [`docs/MCP_CHAT_CAPABILITIES.md`](./docs/MCP_CHAT_CAPABILITIES.md) — **Full capabilities reference** — all 11 tools, resources, prompts, frontend UX, architecture
 > - [`MCP_EXPLORATION_REPORT.md`](./MCP_EXPLORATION_REPORT.md) — Initial exploration and design (framework selection, tool design, Phase 1-3 roadmap)
 > - [`TRADINGVIEW_MCP_FEASIBILITY.md`](./TRADINGVIEW_MCP_FEASIBILITY.md) — Analysis of TradingView MCP options vs. custom SMC MCP
 > - [`docs/archive/MCP_IMPLEMENTATION_REPORT.md`](./docs/archive/MCP_IMPLEMENTATION_REPORT.md) — Original design proposal (superseded — used different architecture: `@anthropic-ai/mcp-sdk` + separate package)
