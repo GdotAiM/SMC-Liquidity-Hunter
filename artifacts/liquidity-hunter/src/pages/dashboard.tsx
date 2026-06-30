@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Activity, AlertCircle, BarChart2, ChevronDown, ChevronUp, Minus, RefreshCw, TrendingDown, TrendingUp, Zap } from "lucide-react";
+import { Activity, AlertCircle, BarChart2, ChevronDown, ChevronUp, Minus, Radio, RefreshCw, TrendingDown, TrendingUp, Zap } from "lucide-react";
 import {
   getAnalyzeCryptoQueryKey,
   getAnalyzeForexQueryKey,
@@ -13,6 +13,7 @@ import { ConfluenceCard } from "@/components/ConfluenceCard";
 import { ConfluenceSheet } from "@/components/ConfluenceSheet";
 import { IntelligenceSheet } from "@/components/IntelligenceSheet";
 import { ChartView } from "@/components/ChartView";
+import { useRealtimeStream } from "@/lib/realtime";
 
 type Market = "crypto" | "forex";
 
@@ -339,6 +340,37 @@ export default function Dashboard() {
 
   const primaryReport = r4h.data ?? r1h.data ?? r1d.data ?? r15m.data;
 
+  // ── Real-time WebSocket stream ──────────────────────────────────────────
+  const {
+    liveData,
+    connected: wsConnected,
+    candles: liveCandles,
+  } = useRealtimeStream({
+    symbol,
+    timeframes: activeStyle.timeframes,
+    // Fallback: if server-side report rebuild isn't ready yet, trigger a REST refetch
+    onCandleClosed: useCallback((_sym: string, tf: string) => {
+      const queryKey =
+        market === "crypto"
+          ? getAnalyzeCryptoQueryKey({ symbol, timeframe: tf, correlatedSymbol: corrParam })
+          : getAnalyzeForexQueryKey({ symbol, timeframe: tf, correlatedSymbol: corrParam });
+      queryClient.invalidateQueries({ queryKey });
+    }, [market, symbol, corrParam, queryClient]),
+    // Primary path: server rebuilt the SmcReport and pushed it via SSE.
+    // Inject it directly into the TanStack Query cache — zero network round-trip.
+    onReportUpdate: useCallback((tf: string, report: SmcReport) => {
+      const queryKey =
+        market === "crypto"
+          ? getAnalyzeCryptoQueryKey({ symbol, timeframe: tf, correlatedSymbol: corrParam })
+          : getAnalyzeForexQueryKey({ symbol, timeframe: tf, correlatedSymbol: corrParam });
+      queryClient.setQueryData(queryKey, report);
+    }, [market, symbol, corrParam, queryClient]),
+  });
+
+  // Derive live current price from the primary timeframe's real-time data
+  const livePrice = liveData[activeStyle.timeframes[activeStyle.timeframes.length - 1]]?.currentPrice;
+  const effectivePrice = livePrice ?? primaryReport?.currentPrice;
+
   return (
     <div className="min-h-screen bg-background text-foreground font-mono">
 
@@ -435,15 +467,36 @@ export default function Dashboard() {
               </span>
             </button>
 
-            {/* Price */}
-            {primaryReport && (
-              <div className="text-right">
-                <div className="text-base font-bold">{fmtPrice(primaryReport.currentPrice, market)}</div>
-                <div className="text-[10px] text-muted-foreground">
-                  {symbol} · {new Date(primaryReport.generatedAt * 1000).toLocaleTimeString()}
-                </div>
-              </div>
-            )}
+            {/* Live Price */}
+            <div className="text-right">
+              {effectivePrice ? (
+                <>
+                  <div className="flex items-center gap-1.5 justify-end">
+                    <Radio
+                      className={`w-2.5 h-2.5 ${wsConnected ? "text-emerald-500 animate-pulse" : "text-muted-foreground"}`}
+                    />
+                    <span className={`text-base font-bold tabular-nums ${wsConnected && livePrice ? "text-emerald-400" : ""}`}>
+                      {fmtPrice(effectivePrice, market)}
+                    </span>
+                    {wsConnected && livePrice && (
+                      <span className="text-[9px] px-1 py-0.5 rounded-sm bg-emerald-500/15 text-emerald-400 font-bold uppercase">
+                        LIVE
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-[10px] text-muted-foreground">
+                    {symbol}{wsConnected ? " · real-time" : primaryReport ? ` · ${new Date(primaryReport.generatedAt * 1000).toLocaleTimeString()}` : ""}
+                  </div>
+                </>
+              ) : primaryReport ? (
+                <>
+                  <div className="text-base font-bold">{fmtPrice(primaryReport.currentPrice, market)}</div>
+                  <div className="text-[10px] text-muted-foreground">
+                    {symbol} · {new Date(primaryReport.generatedAt * 1000).toLocaleTimeString()}
+                  </div>
+                </>
+              ) : null}
+            </div>
           </div>
         </div>
       </header>
@@ -590,6 +643,7 @@ export default function Dashboard() {
           market={market}
           initialTf={cascade.anchorTf}
           onClose={() => setChartOpen(false)}
+          liveCandles={liveCandles as Record<string, import("@/components/ChartView").CandleData[]>}
         />
       )}
     </div>

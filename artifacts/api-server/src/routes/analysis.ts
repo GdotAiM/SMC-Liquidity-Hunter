@@ -130,4 +130,20 @@ router.get("/analysis/forex", async (req, res): Promise<void> => {
   }
 });
 
+/**
+ * Update (or create) a cached analysis report. Used by the real-time pipeline
+ * to pre-warm the cache when a candle closes, so the next REST poll returns
+ * the fresh SMC report without hitting Yahoo Finance.
+ */
+export function updateCachedReport(
+  market: "crypto" | "forex",
+  symbol: string,
+  timeframe: string,
+  correlatedSymbol: string | undefined,
+  report: unknown,
+): void {
+  const key = cacheKey(market, symbol, timeframe, correlatedSymbol);
+  setCached(key, report);
+}
+
 export default router;

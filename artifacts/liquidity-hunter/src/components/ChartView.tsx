@@ -219,11 +219,22 @@ function drawOverlay(
 
 // ── ChartView component ────────────────────────────────────────────────────────
 
+export interface CandleData {
+  time: number;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+}
+
 interface Props {
   reports: Array<{ tf: string; report: SmcReport }>;
   market: Market;
   initialTf?: string;
   onClose: () => void;
+  /** Per-timeframe live candles from the real-time stream */
+  liveCandles?: Record<string, CandleData[]>;
 }
 
 const TF_LABEL: Record<string, string> = {
@@ -231,7 +242,7 @@ const TF_LABEL: Record<string, string> = {
   "1h": "H1", "4h": "H4", "1d": "D1", "1w": "W1",
 };
 
-export function ChartView({ reports, market, initialTf, onClose }: Props) {
+export function ChartView({ reports, market, initialTf, onClose, liveCandles }: Props) {
   const [activeTf, setActiveTf] = useState<string>(
     initialTf ?? reports[0]?.tf ?? "4h",
   );
@@ -244,6 +255,63 @@ export function ChartView({ reports, market, initialTf, onClose }: Props) {
 
   const activeReport = reports.find(r => r.tf === activeTf)?.report ?? null;
   reportRef.current = activeReport;
+
+  // ── Live candle update ──────────────────────────────────────────────────────
+  // When live candles arrive for the active timeframe, update the last data point
+  useEffect(() => {
+    if (!liveCandles || !seriesRef.current) return;
+    const tfCandles = liveCandles[activeTf];
+    if (!tfCandles || tfCandles.length === 0) return;
+
+    const latest = tfCandles[tfCandles.length - 1];
+    try {
+      seriesRef.current.update({
+        time: latest.time as never,
+        open: latest.open,
+        high: latest.high,
+        low: latest.low,
+        close: latest.close,
+      });
+    } catch {
+      // If update fails (e.g., time not found), use setData to merge
+      try {
+        const existingData = (seriesRef.current as unknown as { dataByTime?: Map<number, unknown> })?.dataByTime;
+        if (!existingData?.has(latest.time)) {
+          // Append new candle
+          const allData = [
+            ...(activeReport?.candles ?? []).map(c => ({
+              time: c.time as never,
+              open: c.open,
+              high: c.high,
+              low: c.low,
+              close: c.close,
+            })),
+          ];
+          const idx = allData.findIndex(c => (c.time as number) === latest.time);
+          if (idx >= 0) {
+            allData[idx] = {
+              time: latest.time as never,
+              open: latest.open,
+              high: latest.high,
+              low: latest.low,
+              close: latest.close,
+            };
+          } else {
+            allData.push({
+              time: latest.time as never,
+              open: latest.open,
+              high: latest.high,
+              low: latest.low,
+              close: latest.close,
+            });
+          }
+          seriesRef.current.setData(allData.sort((a, b) => (a.time as number) - (b.time as number)));
+        }
+      } catch {
+        // Silently ignore — chart may not be ready
+      }
+    }
+  }, [liveCandles, activeTf, activeReport]);
 
   const redraw = useCallback(() => {
     if (!canvasRef.current || !chartRef.current || !seriesRef.current || !reportRef.current) return;
