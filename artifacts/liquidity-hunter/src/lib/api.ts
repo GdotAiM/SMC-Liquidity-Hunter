@@ -4,7 +4,9 @@ export function apiUrl(path: string): string {
   return `${BASE}/api${path}`;
 }
 
-export type ChatMessage = { role: "user" | "assistant"; content: string };
+export type ChatMessage = { role: "user" | "assistant" | "tool"; content: string; tool_call_id?: string };
+
+// ── Classic endpoint ──────────────────────────────────────────────────────────
 
 export async function askAgents(
   question: string,
@@ -44,6 +46,57 @@ export async function askAgents(
     }
   }
 }
+
+// ── MCP-aware endpoint ───────────────────────────────────────────────────────
+
+export type McpStreamEvent =
+  | { type: "content"; content: string }
+  | { type: "tool_start"; tool: string }
+  | { type: "tool_result"; tool: string; content: string }
+  | { type: "done" }
+  | { type: "error"; error: string };
+
+export async function askAgentsMcp(
+  question: string,
+  history: ChatMessage[],
+  onEvent: (event: McpStreamEvent) => void,
+): Promise<void> {
+  const res = await fetch(apiUrl("/agents/ask-mcp"), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ question, history }),
+  });
+
+  if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split("\n");
+    buffer = lines.pop() ?? "";
+    for (const line of lines) {
+      const t = line.trim();
+      if (!t.startsWith("data: ")) continue;
+      try {
+        const json = JSON.parse(t.slice(6));
+        if (json.tool_start) onEvent({ type: "tool_start", tool: json.tool_start });
+        else if (json.tool_result) onEvent({ type: "tool_result", tool: json.tool_result, content: json.content });
+        else if (json.content) onEvent({ type: "content", content: json.content });
+        else if (json.done) onEvent({ type: "done" });
+        else if (json.error) onEvent({ type: "error", error: json.error });
+      } catch {
+        // skip malformed SSE lines
+      }
+    }
+  }
+}
+
+// ── Pipeline endpoint ────────────────────────────────────────────────────────
 
 export type PipelineEvent =
   | { agent: string; type: "start" }
