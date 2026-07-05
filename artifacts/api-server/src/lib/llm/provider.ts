@@ -210,6 +210,6 @@ export async function chatCompletion(
     throw new Error(`LLM HTTP ${response.status}: ${errorText.slice(0, 200)}`);
   }
 
-  const json = await response.json();
+  const json = (await response.json()) as { choices?: Array<{ message?: { content?: string } }> };
   return json.choices?.[0]?.message?.content ?? "";
 }

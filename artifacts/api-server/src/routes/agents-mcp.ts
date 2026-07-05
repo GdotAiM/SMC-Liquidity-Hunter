@@ -266,7 +266,7 @@ router.post("/agents/ask-mcp", async (req: Request, res: Response): Promise<void
   res.setHeader("Connection", "keep-alive");
   res.setHeader("X-Accel-Buffering", "no");
 
-  const messages: Array<{ role: string; content: string; tool_calls?: unknown; tool_call_id?: string }> = [
+  const messages: Array<Record<string, unknown>> = [
     { role: "system", content: buildMcpSystemPrompt(context) },
     ...history.slice(-8),
     { role: "user", content: question },
@@ -333,15 +333,17 @@ router.post("/agents/ask-mcp", async (req: Request, res: Response): Promise<void
             }
 
             if (delta?.tool_calls) {
-              for (const tc of delta.tool_calls) {
+              for (const raw of delta.tool_calls) {
+                const tc = raw as { id?: string; function?: { name?: string; arguments?: string } };
                 if (tc.id) {
                   if (currentToolCall && currentToolCall.id !== tc.id) {
                     toolCalls.push({ ...currentToolCall });
                   }
+                  const fn = tc.function;
                   currentToolCall = {
                     id: tc.id,
-                    name: tc.function?.name ?? currentToolCall?.name ?? "",
-                    arguments: tc.function?.arguments ?? "",
+                    name: fn?.name ?? currentToolCall?.name ?? "",
+                    arguments: fn?.arguments ?? "",
                   };
                 } else if (tc.function?.arguments && currentToolCall) {
                   currentToolCall.arguments += tc.function.arguments;
@@ -367,7 +369,7 @@ router.post("/agents/ask-mcp", async (req: Request, res: Response): Promise<void
             type: "function",
             function: { name: tc.name, arguments: tc.arguments },
           })),
-        } as Record<string, unknown>);
+        });
 
         // Execute each tool and add results
         for (const tc of toolCalls) {
@@ -384,7 +386,8 @@ router.post("/agents/ask-mcp", async (req: Request, res: Response): Promise<void
             role: "tool",
             tool_call_id: tc.id,
             content: result,
-          } as Record<string, unknown>);
+          });
+
         }
 
         // Continue loop — AI will process tool results and respond
