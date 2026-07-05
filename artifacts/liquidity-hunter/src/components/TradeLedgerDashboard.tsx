@@ -250,17 +250,7 @@ export function TradeLedgerDashboard() {
   ];
 
   return (
-    <div className="space-y-6 p-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">
-          Trade Ledger & Performance Matrix
-        </h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Multi-dimensional trade tracking across setups, assets, timeframes, and
-          market regimes.
-        </p>
-      </div>
-
+    <div className="space-y-6">
       {/* Filters */}
       <div className="flex gap-3">
         <Select value={assetFilter} onValueChange={setAssetFilter}>

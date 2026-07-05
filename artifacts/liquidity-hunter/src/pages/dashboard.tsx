@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Activity, AlertCircle, BarChart2, ChevronDown, ChevronUp, Minus, Radio, RefreshCw, TrendingDown, TrendingUp, Zap } from "lucide-react";
+import { useLocation } from "wouter";
+import { Activity, AlertCircle, BarChart2, BarChart3, ChevronDown, ChevronUp, Minus, Radio, RefreshCw, TrendingDown, TrendingUp, Zap } from "lucide-react";
 import {
   getAnalyzeCryptoQueryKey,
   getAnalyzeForexQueryKey,
@@ -264,6 +265,7 @@ export default function Dashboard() {
   const [refreshing,  setRefreshing]  = useState(false);
 
   const queryClient = useQueryClient();
+  const [, setLocation] = useLocation();
 
   const doRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -434,6 +436,16 @@ export default function Dashboard() {
           >
             <BarChart2 className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">CHART</span>
+          </button>
+
+          {/* Analytics button */}
+          <button
+            onClick={() => setLocation("/analytics")}
+            title="Trade ledger, performance matrix & signal generator"
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-sm border border-border bg-muted text-muted-foreground hover:text-primary hover:border-primary/50 transition-colors text-xs font-bold"
+          >
+            <BarChart3 className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">ANALYTICS</span>
           </button>
 
           {/* Auto-refresh ring */}
