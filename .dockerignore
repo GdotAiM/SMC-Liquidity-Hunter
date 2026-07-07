@@ -1,45 +1,15 @@
-# Dependencies (installed inside the image)
-node_modules/
-.pythonlibs/
-.cache/
-
-# Git
-.git/
+node_modules
+**/node_modules
+**/dist
+**/.turbo
+**/*.log
+.git
 .gitignore
-.gitattributes
-
-# Logs
-*.log
-logs/
-
-# Documentation (not needed at runtime)
-docs/
-docs-backup/
-*.md
-!README.md
-
-# Deployment configs (not needed in the app image)
-deploy/
-
-# IDE / editor
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# Environment files (should never be in the image)
 .env
 .env.*
-!.env.example
-
-# Build artifacts that get regenerated
-dist/
-.next/
-coverage/
-
-# OS junk
-.DS_Store
-Thumbs.db
-
-# CI
-.github/
+deploy
+docs
+*.md
+.vscode
+.idea
+data/mock_broker
