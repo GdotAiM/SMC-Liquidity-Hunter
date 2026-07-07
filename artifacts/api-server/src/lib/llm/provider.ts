@@ -40,6 +40,10 @@ const FIREWORKS_MODEL = "accounts/fireworks/models/deepseek-v4-pro";
 
 // AMD Developer Cloud — vLLM on MI300X default
 const AMD_DEFAULT_BASE = "http://localhost:8000/v1";
+// IMPORTANT: keep this in sync with the LLM_MODEL default in .env.amd.
+// This constant is the bare-metal fallback (non-Docker path); the Docker
+// path uses the compose file's ${LLM_MODEL:-...} + .env.amd.  Both must
+// agree so behavior is consistent across deployment modes.
 const AMD_DEFAULT_MODEL = "google/gemma-4-26B-A4B-it";
 
 // ── Resolve config from env ──────────────────────────────────────────────────

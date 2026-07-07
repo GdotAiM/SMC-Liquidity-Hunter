@@ -25,7 +25,21 @@ app.use(
     },
   }),
 );
-app.use(cors());
+// CORS — controlled by CORS_ORIGINS env var (comma-separated allowlist,
+// "*" for any origin).  Defaults to wide-open for development; restrict
+// in production.
+const corsOrigins = (process.env.CORS_ORIGINS || "*")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
+app.use(
+  cors({
+    origin:
+      corsOrigins.length === 0 || corsOrigins[0] === "*"
+        ? "*"
+        : corsOrigins,
+  }),
+);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

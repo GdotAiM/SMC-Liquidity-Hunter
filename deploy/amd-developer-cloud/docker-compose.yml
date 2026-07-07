@@ -13,6 +13,14 @@
 
 version: "3.9"
 
+# ── Shared defaults ───────────────────────────────────────────────────────────
+# These are the canonical defaults for the AMD deployment.  .env.amd mirrors
+# these values — keep the two files in sync when changing the default model.
+# ──────────────────────────────────────────────────────────────────────────────
+x-defaults: &defaults
+  LLM_MODEL: "google/gemma-4-26B-A4B-it"
+  LLM_TOOL_PARSER: "gemma4"
+
 services:
   # ── vLLM Inference Server (ROCm on MI300X) ──────────────────────────────────
   vllm:
@@ -29,6 +37,10 @@ services:
     volumes:
       - vllm-cache:/root/.cache/vllm
       - hf-cache:/root/.cache/huggingface
+    # --trust-remote-code (below) executes arbitrary Python from the HuggingFace
+    # model repo at load time — a supply-chain risk.  Currently required for
+    # Gemma 4 on ROCm because the model ships custom modeling code.  Remove it
+    # if you switch to a model that does not bundle custom code.
     command: >
       --model ${LLM_MODEL:-google/gemma-4-26B-A4B-it}
       --host 0.0.0.0
@@ -37,8 +49,8 @@ services:
       --gpu-memory-utilization ${VLLM_GPU_MEM_UTIL:-0.92}
       --tensor-parallel-size ${VLLM_TP_SIZE:-1}
       --dtype ${VLLM_DTYPE:-auto}
-      --tool-call-parser gemma4
-      --reasoning-parser gemma4
+      --tool-call-parser ${LLM_TOOL_PARSER:-gemma4}
+      --reasoning-parser ${LLM_TOOL_PARSER:-gemma4}
       --enable-auto-tool-choice
       --trust-remote-code
       --enforce-eager
@@ -68,15 +80,25 @@ services:
       - NODE_ENV=production
       - PORT=${API_PORT:-3001}
       - MCP_PORT=${MCP_PORT:-3002}
-      - LLM_PROVIDER=amd
+      # LLM_PROVIDER is an env var (not a bare literal) so you can override it
+      # via .env to test against fireworks/openai while still running on the
+      # AMD VM — e.g. LLM_PROVIDER=fireworks.  The vllm container will still
+      # start (depends_on is unconditional), but the API server will route to
+      # the provider you choose.
+      - LLM_PROVIDER=${LLM_PROVIDER:-amd}
       - LLM_BASE_URL=${LLM_BASE_URL:-http://vllm:8000/v1}
       - LLM_API_KEY=not-needed
+      # Default model must stay in sync with .env.amd and provider.ts.
       - LLM_MODEL=${LLM_MODEL:-google/gemma-4-26B-A4B-it}
       - DATABASE_URL=${DATABASE_URL:-}
-      - COOKIE_SECRET=${COOKIE_SECRET:-}
       - CORS_ORIGINS=${CORS_ORIGINS:-*}
       - BINANCE_API_KEY=${BINANCE_API_KEY:-}
       - FINNHUB_API_KEY=${FINNHUB_API_KEY:-}
+    # depends_on is unconditional — vLLM will always start even if you set
+    # LLM_PROVIDER to a non-amd provider.  This is harmless; vLLM just idles
+    # on the GPU if nothing queries it.  If you need to avoid GPU allocation
+    # entirely (e.g. for a Fireworks-only test), comment out the vllm service
+    # and this depends_on block.
     depends_on:
       vllm:
         condition: service_healthy

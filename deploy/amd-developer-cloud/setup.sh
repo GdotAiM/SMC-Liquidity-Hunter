@@ -134,10 +134,21 @@ echo -e "${GREEN}║${NC}  curl http://localhost:3001/api/healthz   # API server
 echo -e "${GREEN}║${NC}  curl http://localhost:8000/v1/models # vLLM                    ${GREEN}║${NC}"
 echo -e "${GREEN}║${NC}  curl http://localhost:3002/mcp       # MCP endpoint            ${GREEN}║${NC}"
 echo -e "${GREEN}║${NC}                                                                ${GREEN}║${NC}"
+# Source the canonical defaults so the printed examples reflect the
+# actual configured model, not a stale hardcoded copy.
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ENV_AMD="${SCRIPT_DIR}/.env.amd"
+if [[ -f "${ENV_AMD}" ]]; then
+  set -a; source "${ENV_AMD}"; set +a
+fi
+# If LLM_MODEL is still unset (shouldn't happen if .env.amd exists), provide a
+# last-resort fallback so the example command is syntactically valid.
+: "${LLM_MODEL:=google/gemma-4-26B-A4B-it}"
+
 echo -e "${GREEN}║${NC}  # Run a test inference:                                        ${GREEN}║${NC}"
 echo -e "${GREEN}║${NC}  curl http://localhost:8000/v1/chat/completions \\              ${GREEN}║${NC}"
 echo -e "${GREEN}║${NC}    -H "Content-Type: application/json" \\                       ${GREEN}║${NC}"
-echo -e "${GREEN}║${NC}    -d '{"model":"${LLM_MODEL:-google/gemma-4-26B-A4B-it}","messages":[{"role":"user","content":"Say hello from AMD MI300X"}]}' ${GREEN}║${NC}"
+echo -e "${GREEN}║${NC}    -d '{"model":"${LLM_MODEL}","messages":[{"role":"user","content":"Say hello from AMD MI300X"}]}' ${GREEN}║${NC}"
 echo -e "${GREEN}║${NC}                                                                ${GREEN}║${NC}"
 echo -e "${GREEN}╚══════════════════════════════════════════════════════════════════╝${NC}"
 echo

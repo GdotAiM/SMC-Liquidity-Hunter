@@ -104,6 +104,11 @@ Add ~20 GB overhead for KV cache + ROCm runtime. The 26B A4B MoE fits
 comfortably on a single MI300X (192 GB HBM3). To switch models, change
 `LLM_MODEL` in `.env` and restart.
 
+> **⚠ Non-Gemma models**: if you switch to a non-Gemma model (Mistral, Llama,
+> Qwen, etc.), you must also change `LLM_TOOL_PARSER` in `.env` to the
+> appropriate parser or clear it.  See the [vLLM Flags](#vllm-flags-docker-composeyml)
+> section for supported parser names.
+
 ## Quick Start
 
 ### 1. Provision an AMD Developer Cloud VM
@@ -167,7 +172,8 @@ curl -N http://localhost:3001/api/agents/ask-mcp \
 | Variable | Default | Notes |
 |---|---|---|
 | `LLM_MODEL` | `google/gemma-4-26B-A4B-it` | Any HF model vLLM+ROCm can serve |
-| `LLM_PROVIDER` | `amd` | Set in compose; switches provider abstraction |
+| `LLM_TOOL_PARSER` | `gemma4` | vLLM parser name for tool calling — see vLLM Flags section |
+| `LLM_PROVIDER` | `amd` | Overridable via `.env` (fireworks / openai / custom) |
 | `VLLM_PORT` | `8000` | vLLM API port (internal) |
 | `VLLM_MAX_MODEL_LEN` | `8192` | Max context length |
 | `VLLM_GPU_MEM_UTIL` | `0.92` | Fraction of GPU memory for vLLM |
@@ -175,30 +181,42 @@ curl -N http://localhost:3001/api/agents/ask-mcp \
 | `VLLM_DTYPE` | `auto` | Model dtype |
 | `API_PORT` | `3001` | API server REST port |
 | `MCP_PORT` | `3002` | MCP endpoint for external AI agents |
-| `CORS_ORIGINS` | `*` | CORS allowed origins |
+| `CORS_ORIGINS` | `*` | CORS allowed origins (`*` = any, or comma-separated list) |
 | `HSA_OVERRIDE_GFX_VERSION` | `9.4.2` | ROCm target: MI300X = gfx942 |
 | `BINANCE_API_KEY` | (optional) | Live crypto market data |
 | `FINNHUB_API_KEY` | (optional) | Live forex market data |
 | `DATABASE_URL` | (optional) | PostgreSQL for user state persistence |
-| `COOKIE_SECRET` | (optional) | Session signing secret |
 
 ## vLLM Flags (docker-compose.yml)
 
-The vLLM service is launched with these flags. Most are configurable via
-environment variables; the Gemma-4-specific parsers are hardcoded:
+The vLLM service is launched with these flags. All flags are configurable via
+environment variables — no flags are hardcoded:
 
 | Flag | Value | Notes |
 |---|---|---|
 | `--model` | `$LLM_MODEL` | Defaults to `google/gemma-4-26B-A4B-it` |
-| `--tool-call-parser` | `gemma4` | Native Gemma 4 function-calling parser |
-| `--reasoning-parser` | `gemma4` | Native Gemma 4 reasoning parser |
+| `--tool-call-parser` | `$LLM_TOOL_PARSER` | Defaults to `gemma4`.  Supported values: `gemma4`, `hermes`, `mistral`, `llama3_json`, `pythonic`, or empty (disabled). |
+| `--reasoning-parser` | `$LLM_TOOL_PARSER` | Defaults to `gemma4`.  Same values as tool-call-parser. |
 | `--enable-auto-tool-choice` | — | Let the model decide when to call tools |
-| `--trust-remote-code` | — | Required for some HF model configs on ROCm |
+| `--trust-remote-code` | — | See security note below |
 | `--enforce-eager` | — | Avoids `hipErrorNoBinaryForGpu` on ROCm |
 | `--max-model-len` | `$VLLM_MAX_MODEL_LEN` | Defaults to 8192 |
 | `--gpu-memory-utilization` | `$VLLM_GPU_MEM_UTIL` | Defaults to 0.92 |
 | `--tensor-parallel-size` | `$VLLM_TP_SIZE` | Defaults to 1 |
 | `--dtype` | `$VLLM_DTYPE` | Defaults to auto |
+
+### Security note: `--trust-remote-code`
+
+This flag tells vLLM to execute arbitrary Python code from the HuggingFace
+model repository at load time (e.g., custom `modeling_*.py`,
+`configuration_*.py`). This is a **supply-chain risk** — a compromised or
+malicious model repo can run code inside the container with GPU device access.
+
+It is currently required for Gemma 4 models on ROCm because they ship custom
+modeling code. If you switch to a model that does not bundle custom code
+(e.g., many Llama and Mistral variants), remove this flag to eliminate the
+risk. Always verify the provenance of any model you load with
+`--trust-remote-code` enabled.
 
 ## Relevant Source Files
 
@@ -215,6 +233,8 @@ environment variables; the Gemma-4-specific parsers are hardcoded:
 **vLLM fails with "hipErrorNoBinaryForGpu"**
 → `--enforce-eager` is already in docker-compose.yml. If it persists, try a
 model known to work with vLLM+ROCm like `mistralai/Mistral-7B-Instruct-v0.3`.
+**If you switch to a non-Gemma model, also clear `LLM_TOOL_PARSER` in `.env`** —
+the Gemma 4 parser flags will break tool calling on other model families.
 
 **"No GPU found" in vLLM logs**
 → Verify `/dev/kfd` and `/dev/dri` are mapped. Run `rocminfo` on the host. If
