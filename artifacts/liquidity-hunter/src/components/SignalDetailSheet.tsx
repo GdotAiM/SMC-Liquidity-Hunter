@@ -5,8 +5,9 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
-import { TrendingUp, TrendingDown, Target, Shield, Flag, Clock, Calendar } from "lucide-react";
+import { TrendingUp, TrendingDown, Target, Shield, Flag, Clock, Calendar, ExternalLink } from "lucide-react";
 import { fmtAssetPrice, formatTimestamp } from "@/lib/format";
+import { alpacaChartUrl } from "@/lib/alpaca-url";
 
 // ─── Types ───
 
@@ -131,7 +132,21 @@ export function SignalDetailSheet({ signal, open, onClose }: Props) {
           {/* ── Header info ── */}
           <div className={`rounded-sm border ${borderColor} ${bgColor} p-3`}>
             <div className="flex items-center justify-between mb-2">
-              <span className="font-bold text-sm">{signal.symbol}</span>
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-sm">{signal.symbol}</span>
+                {alpacaChartUrl(signal.symbol) && (
+                  <a
+                    href={alpacaChartUrl(signal.symbol)!}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title="Open full chart in Alpaca TradingView (paper trading)"
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-sm border border-border bg-muted text-[10px] text-muted-foreground hover:text-primary hover:border-primary/50 transition-colors font-bold uppercase tracking-wider"
+                  >
+                    <ExternalLink className="w-2.5 h-2.5" />
+                    Alpaca Chart
+                  </a>
+                )}
+              </div>
               <div className="flex gap-1.5">
                 <Badge variant="secondary" className="text-[10px] font-mono">
                   {signal.setup_type}

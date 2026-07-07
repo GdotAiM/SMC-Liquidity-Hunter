@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { X, TrendingUp, TrendingDown, Minus, Layers, BarChart2, Activity, Zap, ChevronUp, ChevronDown, Target, Check, AlertTriangle, Copy, ClipboardCheck, Radio, BrainCircuit } from "lucide-react";
+import { X, TrendingUp, TrendingDown, Minus, Layers, BarChart2, Activity, Zap, ChevronUp, ChevronDown, Target, Check, AlertTriangle, Copy, ClipboardCheck, Radio, BrainCircuit, ExternalLink } from "lucide-react";
+import { alpacaChartUrl } from "@/lib/alpaca-url";
 import type { SmcReport } from "@workspace/api-client-react";
 import { AgentPipeline } from "./AgentPipeline";
 import { AgentChat } from "./AgentChat";
@@ -294,6 +295,20 @@ export function IntelligenceSheet({ report, market, onClose, anchorTf, anchorBia
               </div>
             </div>
           </div>
+          {/* Alpaca TradingView link */}
+          {alpacaChartUrl(report.symbol) && (
+            <a
+              href={alpacaChartUrl(report.symbol)!}
+              target="_blank"
+              rel="noopener noreferrer"
+              title="Open full chart in Alpaca TradingView (paper trading)"
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-sm border border-border bg-muted text-muted-foreground hover:text-primary hover:border-primary/50 transition-colors text-[10px] font-bold uppercase tracking-wider"
+            >
+              <ExternalLink className="w-3 h-3" />
+              <span className="hidden sm:inline">Alpaca Chart</span>
+            </a>
+          )}
+
           <button onClick={onClose} className="p-1.5 hover:bg-muted rounded-sm transition-colors">
             <X className="w-4 h-4 text-muted-foreground" />
           </button>

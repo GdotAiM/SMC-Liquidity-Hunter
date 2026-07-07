@@ -9,7 +9,8 @@ import {
 } from "lightweight-charts";
 import type { IChartApi, ISeriesApi, SeriesType } from "lightweight-charts";
 import type { SmcReport } from "@workspace/api-client-react";
-import { X } from "lucide-react";
+import { X, ExternalLink } from "lucide-react";
+import { alpacaChartUrl } from "@/lib/alpaca-url";
 
 type Market = "crypto" | "forex";
 type CandleSeries = ISeriesApi<SeriesType>;
@@ -619,7 +620,21 @@ export function ChartView({ reports, market, initialTf, onClose, liveCandles }: 
           </span>
         )}
 
-        <button onClick={onClose} className="ml-auto p-1.5 hover:bg-[#1f1f1f] rounded-sm transition-colors">
+        {/* Alpaca TradingView link */}
+        {alpacaChartUrl(activeReport.symbol) && (
+          <a
+            href={alpacaChartUrl(activeReport.symbol)!}
+            target="_blank"
+            rel="noopener noreferrer"
+            title="Open full chart in Alpaca TradingView (paper trading)"
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-sm border border-[#2a2a2a] bg-[#181818] text-[#888] hover:text-primary hover:border-primary/50 transition-colors text-[10px] font-bold uppercase tracking-wider ml-auto"
+          >
+            <ExternalLink className="w-3 h-3" />
+            <span className="hidden sm:inline">Alpaca Chart</span>
+          </a>
+        )}
+
+        <button onClick={onClose} className="p-1.5 hover:bg-[#1f1f1f] rounded-sm transition-colors">
           <X className="w-4 h-4 text-[#555]" />
         </button>
       </div>
