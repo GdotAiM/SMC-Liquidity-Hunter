@@ -39,5 +39,15 @@ COPY --from=builder /app/artifacts/api-server/dist ./artifacts/api-server/dist
 # Install production deps only for the server
 RUN pnpm install --no-frozen-lockfile --prod --filter @workspace/api-server
 
+# Run as non-root (Alpine's built-in node user)
+RUN chown -R node:node /app
+USER node
+
 EXPOSE 3001
+EXPOSE 3002
+
+# Healthcheck using Node's built-in http module (no curl needed in Alpine)
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD node -e "require('http').get('http://localhost:'+(process.env.PORT||3001)+'/api/healthz',(r)=>{process.exit(r.statusCode===200?0:1)})"
+
 CMD ["node", "artifacts/api-server/dist/index.mjs"]
