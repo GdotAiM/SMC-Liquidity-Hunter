@@ -103,17 +103,42 @@ function TfAgentCard({
     );
   }
 
-  if (error || !report) {
+  // ── helpers for error display ──
+  const errMsg = useMemo(() => {
+    if (!error) return null;
+    if (error instanceof Error) {
+      // Trim common prefixes from ApiError messages for compact display
+      const msg = error.message;
+      // "HTTP 404 Not Found: Failed to ..." → keep as-is but limit length
+      if (msg.length > 120) return msg.slice(0, 117) + "…";
+      return msg;
+    }
+    if (typeof error === "string") return error;
+    return null;
+  }, [error]);
+
+  if (!report) {
+    // No data at all — show error panel with actual error info when available
+    if (errMsg) {
+      return (
+        <div className="rounded-sm border border-destructive/20 bg-destructive/5 p-4 flex items-start gap-2 min-h-[180px]">
+          <AlertCircle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
+          <div className="min-w-0">
+            <p className="text-xs font-bold"><TfLabel tf={tf} /></p>
+            <p className="text-[10px] text-muted-foreground mt-0.5 leading-relaxed break-all">
+              {errMsg}
+            </p>
+          </div>
+        </div>
+      );
+    }
+    // No data and no error (e.g. disabled query) — compact placeholder
     return (
       <div className="rounded-sm border border-destructive/20 bg-destructive/5 p-4 flex items-start gap-2 min-h-[180px]">
         <AlertCircle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
         <div>
           <p className="text-xs font-bold"><TfLabel tf={tf} /></p>
-          <p className="text-[10px] text-muted-foreground mt-0.5">
-            {tf === "1m" || tf === "5m"
-              ? "Intraday data unavailable (market closed or provider limit)"
-              : "Data unavailable"}
-          </p>
+          <p className="text-[10px] text-muted-foreground mt-0.5">Data unavailable</p>
         </div>
       </div>
     );
@@ -227,6 +252,14 @@ function TfAgentCard({
       <p className="text-[10px] text-primary/50 group-hover:text-primary/80 transition-colors text-right">
         Tap for Intelligence Sheet →
       </p>
+
+      {/* Background refetch error — show subtle warning without hiding valid data */}
+      {error && (
+        <div className="flex items-center gap-1.5 text-[10px] text-amber-400 border-t border-amber-500/15 pt-2">
+          <AlertCircle className="w-3 h-3 shrink-0" />
+          <span className="truncate">Update failed — showing last data</span>
+        </div>
+      )}
     </button>
   );
 }

@@ -206,6 +206,59 @@ export function buildReport(
   timeframe: string,
   options: BuildReportOptions = {},
 ): SmcReport {
+  // Guard against empty candle arrays — downstream code assumes at least one candle
+  if (!candles || candles.length === 0) {
+    return {
+      symbol,
+      market,
+      timeframe,
+      currentPrice: 0,
+      generatedAt: Date.now() / 1000,
+      candles: [],
+      structure: {
+        bias: "neutral",
+        confidence: 0,
+        trend: "ranging",
+        keyLevels: [],
+        breakOfStructure: [],
+        changeOfCharacter: false,
+      },
+      liquidity: {
+        nearestBSL: null,
+        nearestSSL: null,
+        buySidePools: [],
+        sellSidePools: [],
+      },
+      orderBlocks: [],
+      fvg: { gaps: [], activeGaps: [], filledGaps: [] },
+      pdArray: {
+        currentBias: "equilibrium",
+        premiumHigh: 0,
+        discountLow: 0,
+        equilibrium: 0,
+        inPremium: false,
+        inDiscount: false,
+      },
+      dailyBias: {
+        bias: "neutral",
+        strength: 0,
+        consecutiveDays: 0,
+        source: "insufficient data",
+      },
+      smt: {
+        detected: false,
+        type: null,
+        confidence: 0,
+        time: null,
+        primarySymbol: symbol,
+        correlatedSymbol: options.correlatedSymbol ?? null,
+      },
+      draw: [],
+      narrative: "No candle data available for analysis.",
+      sessionState: "No data",
+    };
+  }
+
   const structure  = analyzeStructure(candles, timeframe);
   const fvg        = analyzeFVG(candles, market);
   const liquidity  = analyzeLiquidity(candles, timeframe, market);
