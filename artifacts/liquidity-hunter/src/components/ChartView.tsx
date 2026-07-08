@@ -394,6 +394,7 @@ export function ChartView({ reports, market, initialTf, onClose, liveCandles }: 
     const canvas    = canvasRef.current;
     const rep       = reportRef.current;
     if (!container || !canvas || !rep) return;
+    if (!container.isConnected) return;
 
     const dpr = window.devicePixelRatio || 1;
     const W   = container.clientWidth;
@@ -541,7 +542,10 @@ export function ChartView({ reports, market, initialTf, onClose, liveCandles }: 
     const ro = new ResizeObserver(entries => {
       for (const e of entries) {
         const { width, height } = e.contentRect;
-        chart.resize(width, height);
+        if (width === 0 || height === 0) continue;
+        try {
+          chart.resize(width, height);
+        } catch { /* chart may have been removed */ }
         canvas.width        = width  * dpr;
         canvas.height       = height * dpr;
         canvas.style.width  = `${width}px`;
@@ -553,7 +557,7 @@ export function ChartView({ reports, market, initialTf, onClose, liveCandles }: 
 
     return () => {
       ro.disconnect();
-      chart.remove();
+      try { chart.remove(); } catch { /* already detached from DOM */ }
       chartRef.current  = null;
       seriesRef.current = null;
     };

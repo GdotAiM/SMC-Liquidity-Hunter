@@ -100,7 +100,8 @@ export function TradingViewChart({ symbol, onClose }: Props) {
         log("→ widget created");
 
         // Verify the iframe actually appears (s.tradingview.com can be blocked)
-        setTimeout(() => {
+        const iframeCheckId = setTimeout(() => {
+          if (!el.isConnected) return;
           const iframe = el.querySelector("iframe");
           if (iframe) {
             log("iframe detected:", iframe.src?.slice(0, 80));
