@@ -35,7 +35,7 @@ services:
     environment:
       - HSA_OVERRIDE_GFX_VERSION=${HSA_OVERRIDE_GFX_VERSION:-9.4.2}
       - VLLM_USE_TRITON_FLASH_ATTN=0
-      - HF_TOKEN=${HF_TOKEN}
+      - HF_TOKEN=${HF_TOKEN:-}
       - HF_HUB_ENABLE_HF_TRANSFER=${HF_HUB_ENABLE_HF_TRANSFER:-1}
     devices:
       - /dev/kfd
@@ -71,15 +71,8 @@ services:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
       timeout: 10s
-      retries: 5
-      start_period: 120s
-    # No `deploy.resources.reservations.devices driver: rocm` block here —
-    # that reservation mechanism requires a registered Docker device driver
-    # plugin (the way nvidia-container-toolkit registers "nvidia"). AMD ROCm
-    # does not register one, so `driver: rocm` fails with "could not select
-    # device driver". The plain `devices: /dev/kfd, /dev/dri` passthrough
-    # above is the correct and sufficient way to expose the GPU to this
-    # container — it's what AMD's own official ROCm container recipes use.
+      retries: 10
+      start_period: 600s
 
   # ── SMC API Server ──────────────────────────────────────────────────────────
   api:
@@ -117,11 +110,23 @@ services:
       vllm:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3001/api/healthz"]
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3001/api/healthz', r => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
       interval: 30s
       timeout: 5s
       retries: 3
       start_period: 10s
+
+  # ── Frontend (nginx SPA) ────────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ../../
+      dockerfile: Dockerfile
+      target: frontend
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_PORT:-3000}:80"
+    depends_on:
+      - api
 
 volumes:
   vllm-cache:

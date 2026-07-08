@@ -8,6 +8,8 @@ node_modules
 .env
 .env.*
 deploy
+!deploy/amd-developer-cloud
+!deploy/amd-developer-cloud/nginx
 docs
 *.md
 .vscode

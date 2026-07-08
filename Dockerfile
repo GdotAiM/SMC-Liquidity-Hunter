@@ -21,10 +21,14 @@ COPY artifacts ./artifacts
 COPY lib ./lib
 COPY tsconfig.json tsconfig.base.json ./
 
-# Build only the API server (frontend is served by Vite dev server or built separately)
+# Build the API server
 RUN pnpm --filter @workspace/api-server run build
 
-# ---- Runtime stage ----
+# Build the frontend (needs PORT + BASE_PATH at config-load time; PORT is only used
+# by the dev server, so any value works for a production build)
+RUN PORT=3000 BASE_PATH=/ pnpm --filter @workspace/liquidity-hunter run build
+
+# ---- API runtime stage ----
 FROM node:22-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
@@ -52,3 +56,17 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
   CMD node -e "require('http').get('http://localhost:3001/api/healthz', r => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"
 
 CMD ["node", "artifacts/api-server/dist/index.mjs"]
+
+# ---- Frontend stage (nginx) ----
+FROM nginx:alpine AS frontend
+
+# Copy the built frontend assets from the builder stage
+COPY --from=builder /app/artifacts/liquidity-hunter/dist/public /usr/share/nginx/html
+
+# Copy nginx config
+COPY deploy/amd-developer-cloud/nginx/default.conf /etc/nginx/conf.d/default.conf
+
+EXPOSE 80
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
+  CMD wget -qO- http://localhost:80/ || exit 1

@@ -44,6 +44,7 @@ mcpServer
   .start({
     transportType: "httpStream",
     httpStream: {
+      host: "0.0.0.0",
       port: mcpPort,
       endpoint: "/mcp",
       cors: true,
