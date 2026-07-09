@@ -28,7 +28,7 @@ export function createSmcMcpServer(): FastMCP {
     version: "1.0.0",
   });
 
-  // ── Tools (12) ────────────────────────────────────────────────────────────
+  // ── Tools (11) ────────────────────────────────────────────────────────────
   registerStructureTool(server);
   registerLiquidityTool(server);
   registerOrderBlocksTool(server);

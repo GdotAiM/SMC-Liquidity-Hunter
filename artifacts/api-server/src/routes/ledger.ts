@@ -23,9 +23,20 @@ const brokerAdapter =
 const executionManager = new ExecutionManager(brokerAdapter, "REVIEW");
 const signalGenerator = new SignalGenerator();
 
+// Whether a Postgres database is configured. When false, the read-only ledger
+// and performance-matrix endpoints return empty shapes (and the frontend shows
+// its "no data yet" empty states) instead of throwing 500s. This keeps the
+// Analytics page demoable without a provisioned database — the SMC engine, AI
+// agents, and chart do not depend on the DB.
+const dbConfigured = !!process.env.DATABASE_URL;
+
 // ─── GET /api/ledger — Query signals ──────────────────────────────────────────
 
 router.get("/ledger", async (req, res) => {
+  if (!dbConfigured) {
+    res.json({ signals: [], metrics: matrixService.calculateMetrics([]) });
+    return;
+  }
   try {
     const { asset, setup, symbol, mode, limit } = req.query;
 
@@ -49,6 +60,10 @@ router.get("/ledger", async (req, res) => {
 // ─── GET /api/ledger/pending — Signals awaiting outcome ───────────────────────
 
 router.get("/ledger/pending", async (_req, res) => {
+  if (!dbConfigured) {
+    res.json({ signals: [] });
+    return;
+  }
   try {
     const signals = await ledgerService.getPendingSignals();
     res.json({ signals });
@@ -60,6 +75,10 @@ router.get("/ledger/pending", async (_req, res) => {
 // ─── GET /api/performance-matrix — Matrix data ────────────────────────────────
 
 router.get("/performance-matrix", async (req, res) => {
+  if (!dbConfigured) {
+    res.json([]);
+    return;
+  }
   try {
     const { asset, detailed } = req.query;
 
@@ -107,8 +126,15 @@ router.post("/signals/generate", async (req, res) => {
       return;
     }
 
-    // Log to ledger
-    await ledgerService.logSignal(signal, "REVIEW");
+    // Log to ledger — best-effort. If no DB is configured (demo without
+    // Postgres), still return the generated signal so the UI can display it.
+    if (dbConfigured) {
+      try {
+        await ledgerService.logSignal(signal, "REVIEW");
+      } catch (logErr) {
+        req.log.warn({ err: logErr }, "ledger logging failed — returning signal anyway");
+      }
+    }
 
     res.json({ signals: [signal] });
   } catch (error: any) {

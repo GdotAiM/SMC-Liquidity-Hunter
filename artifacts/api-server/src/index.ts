@@ -37,9 +37,16 @@ const server = app.listen(port, (err) => {
 });
 
 // ── Trade Auto-Settlement ────────────────────────────────────────────────────
+// Only start the settlement daemon when a database is configured. Without one
+// it would throw every poll cycle; skipping it keeps the demo log clean and
+// the SMC engine / AI agents / chart all work without it.
 
 const settlementService = new TradeSettlementService();
-settlementService.start();
+if (process.env.DATABASE_URL) {
+  settlementService.start();
+} else {
+  logger.info("TradeSettlementService skipped — no DATABASE_URL configured");
+}
 
 // ── MCP Server (external AI agent access) ────────────────────────────────────
 

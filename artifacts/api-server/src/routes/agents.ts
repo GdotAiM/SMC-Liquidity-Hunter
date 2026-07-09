@@ -213,8 +213,22 @@ router.post("/agents/pipeline", async (req: Request, res: Response): Promise<voi
   res.setHeader("Connection", "keep-alive");
   res.setHeader("X-Accel-Buffering", "no");
 
+  // Accumulate each agent's full streamed output so the Confluence agent can
+  // synthesize from what the prior agents ACTUALLY said, instead of re-reading
+  // the same SmcReport they all started from. This is what makes the pipeline a
+  // genuine multi-step chain rather than four independent single-shot calls.
+  const priorOutputs: Array<{ agent: string; text: string }> = [];
+
   for (const { agent, prompt } of agentPrompts) {
     res.write(`data: ${JSON.stringify({ agent, type: "start" })}\n\n`);
+
+    // The Confluence agent is fed the real outputs of the Structure, Liquidity,
+    // and FVG agents. Earlier agents get their original prompt unchanged.
+    const userContent = priorOutputs.length
+      ? `Previous agents in this pipeline produced the following analyses. Synthesize your answer from THESE outputs (not from the raw report):\n\n` +
+        priorOutputs.map((o) => `### ${o.agent}\n${o.text}`).join("\n\n") +
+        `\n\nNow, as the Confluence Agent: ${prompt}`
+      : prompt;
 
     try {
       const response = await fetch(`${llmConfig.baseUrl}/chat/completions`, {
@@ -231,7 +245,7 @@ router.post("/agents/pipeline", async (req: Request, res: Response): Promise<voi
           max_tokens: 512,
           messages: [
             { role: "system", content: systemPrompt },
-            { role: "user", content: prompt },
+            { role: "user", content: userContent },
           ],
         }),
       });
@@ -244,6 +258,7 @@ router.post("/agents/pipeline", async (req: Request, res: Response): Promise<voi
       const reader  = response.body.getReader();
       const decoder = new TextDecoder();
       let buffer    = "";
+      let agentText = "";
 
       while (true) {
         const { done, value } = await reader.read();
@@ -259,11 +274,15 @@ router.post("/agents/pipeline", async (req: Request, res: Response): Promise<voi
           try {
             const json  = JSON.parse(trimmed.slice(6));
             const delta = json.choices?.[0]?.delta?.content;
-            if (delta) res.write(`data: ${JSON.stringify({ agent, type: "delta", content: delta })}\n\n`);
+            if (delta) {
+              agentText += delta;
+              res.write(`data: ${JSON.stringify({ agent, type: "delta", content: delta })}\n\n`);
+            }
           } catch { /* skip */ }
         }
       }
 
+      priorOutputs.push({ agent, text: agentText });
       res.write(`data: ${JSON.stringify({ agent, type: "done" })}\n\n`);
     } catch (err) {
       req.log.error({ err, agent }, "Pipeline agent failed");
