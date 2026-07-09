@@ -184,17 +184,18 @@ export function analyzeStructure(candles: Candle[], timeframe = "4h"): Structure
 
   for (const { i, isHigh } of allPivotIndices) {
     const price     = isHigh ? candles[i].high : candles[i].low;
-    const totalBars = candles.length;
 
     if (isHigh) {
       if (lastHH === null || price > lastHH) {
         pivots.push({ index: i, price, type: "HH", confirmed: true, time: candles[i].time });
-        if (lastHH !== null && lastLH !== null) {
+        // BOS bullish: HH breaking above a known LH confirms bullish continuation
+        if (lastLH !== null && price > lastLH) {
           breaks.push({ index: i, price, type: "BOS", direction: "bullish", time: candles[i].time });
         }
         lastHH = price;
       } else {
         pivots.push({ index: i, price, type: "LH", confirmed: true, time: candles[i].time });
+        // CHoCH bearish: LH forms after a known HL — potential trend reversal
         if (lastHL !== null) {
           breaks.push({ index: i, price, type: "CHoCH", direction: "bearish", time: candles[i].time });
         }
@@ -203,12 +204,14 @@ export function analyzeStructure(candles: Candle[], timeframe = "4h"): Structure
     } else {
       if (lastLL === null || price < lastLL) {
         pivots.push({ index: i, price, type: "LL", confirmed: true, time: candles[i].time });
-        if (lastLL !== null && lastHL !== null) {
+        // BOS bearish: LL breaking below a known HL confirms bearish continuation
+        if (lastHL !== null && price < lastHL) {
           breaks.push({ index: i, price, type: "BOS", direction: "bearish", time: candles[i].time });
         }
         lastLL = price;
       } else {
         pivots.push({ index: i, price, type: "HL", confirmed: true, time: candles[i].time });
+        // CHoCH bullish: HL forms after a known LH — potential trend reversal
         if (lastLH !== null) {
           breaks.push({ index: i, price, type: "CHoCH", direction: "bullish", time: candles[i].time });
         }

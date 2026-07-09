@@ -84,7 +84,7 @@ export function analyzeSMT(
 
       const primHH       = primSlice[ph].high;
       const prevPrimHigh = primExtremes.highs.slice(0, primExtremes.highs.indexOf(ph)).pop();
-      const prevCorrHigh = corrExtremes.highs.slice(0, -1).pop();
+      const prevCorrHigh = corrExtremes.highs.slice(0, corrExtremes.highs.indexOf(ch)).pop();
 
       if (prevPrimHigh === undefined || prevCorrHigh === undefined) continue;
 
@@ -112,7 +112,7 @@ export function analyzeSMT(
 
       const primLL      = primSlice[pl].low;
       const prevPrimLow = primExtremes.lows.slice(0, primExtremes.lows.indexOf(pl)).pop();
-      const prevCorrLow = corrExtremes.lows.slice(0, -1).pop();
+      const prevCorrLow = corrExtremes.lows.slice(0, corrExtremes.lows.indexOf(cl)).pop();
 
       if (prevPrimLow === undefined || prevCorrLow === undefined) continue;
 
