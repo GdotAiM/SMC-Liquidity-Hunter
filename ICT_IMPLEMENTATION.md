@@ -35,17 +35,20 @@ Market structure is the foundation of SMC analysis. Price makes a series of swin
 A BOS occurs when price closes beyond a recent swing high (bullish BOS) or swing low (bearish BOS) **in the direction of the existing trend**. It confirms the trend is continuing.
 
 ### Algorithm (`structure.ts → analyzeStructure()`)
-After pivot detection, the algorithm scans for price closes that exceed the price of the most recent opposing pivot:
-- Price closes **above** the last confirmed swing high → **Bullish BOS**
-- Price closes **below** the last confirmed swing low → **Bearish BOS**
-- The break price is recorded at the pivot price level
+After pivot detection, the algorithm classifies pivots as BOS or CHoCH based on their relationship to prior pivots:
+
+- **Bullish BOS**: A new HH pivot whose price breaks above the last known LH (if one exists) — confirms bullish continuation after a prior bearish signal
+- **Bearish BOS**: A new LL pivot whose price breaks below the last known HL (if one exists) — confirms bearish continuation after a prior bullish signal
+
+This is more ICT-accurate than requiring a prior BOS — the first HH after seeing a LH that breaks above it IS a BOS (break of the LH resistance). Similarly the first LL after seeing a HL that breaks below it IS a BOS.
 
 ### Strengths
 - Produces a timestamped `StructureBreak` for every BOS, enabling chart overlay of exact break bars
 - Used as input to phase detection
+- Correctly fires BOS on the first reversal break, not just on consecutive breaks
 
 ### Limitations
-- No partial-body requirement — wicks that break and close back may still register
+- In a pure trend (no opposing pivots), no BOS is generated — BOS requires at least one counter-trend pivot to break past
 - Does not distinguish between a BOS that sweeps liquidity first (manipulation) and a clean continuation BOS
 
 ---
@@ -56,16 +59,20 @@ After pivot detection, the algorithm scans for price closes that exceed the pric
 A CHoCH (Change of Character), also called MSS (Market Structure Shift), occurs when price breaks a swing point **against the existing trend direction**. It signals a potential reversal of the current narrative.
 
 ### Algorithm (`structure.ts → analyzeStructure()`)
-Same detection mechanism as BOS, but classified as `CHoCH` when the break direction **contradicts** the established trend:
-- In a bearish trend (LH/LL sequence), a close above the most recent LH = **Bullish CHoCH**
-- In a bullish trend (HH/HL sequence), a close below the most recent HL = **Bearish CHoCH**
+CHoCH is detected from pivot classification, not a separate scan:
+
+- **Bearish CHoCH**: A LH pivot is detected when a known HL existed from the prior uptrend — this signals potential trend reversal
+- **Bullish CHoCH**: A HL pivot is detected when a known LH existed from the prior downtrend — this signals potential trend reversal
+
+The algorithm enforces that CHoCH only fires when BOTH pivot types (trend + counter-trend) have been seen — a CHoCH is meaningless without the prior trend context.
 
 ### Strengths
 - Precisely timestamps when the market character changed
 - Used by `detectPhase()` to classify manipulation vs distribution
+- Requires prior trend context (HL or LH must exist) before CHoCH can fire
 
 ### Limitations
-- A single CHoCH without follow-through BOS is not confirmed continuation — the algorithm does not yet require a confirming BOS after a CHoCH to validate a reversal
+- A single CHoCH without follow-through BOS is not confirmed continuation — the `detectPhase()` function accounts for this by distinguishing manipulation from continuation
 
 ---
 
@@ -301,6 +308,7 @@ SMT (Smart Money Tool) Divergence occurs when two correlated instruments (e.g., 
 ### Strengths
 - Magnitude and timing scoring filters out spurious correlations
 - Injected into both the system prompt and the confluence scoring engine
+- Correctly uses per-extreme prior comparison (`indexOf(ch/cl)`) — previously used `slice(0, -1)` which always fetched the second-to-last element, causing false SMT signals when both instruments moved in sync
 
 ### Limitations
 - Only detects one divergence type at a time (most recent wins)

@@ -201,12 +201,19 @@ workspace/
 │   │       │   │   ├── config.ts
 │   │       │   │   ├── types.ts
 │   │       │   │   ├── structure.ts
+│   │       │   │   ├── structure.test.ts
 │   │       │   │   ├── liquidity.ts
+│   │       │   │   ├── liquidity.test.ts
 │   │       │   │   ├── order-blocks.ts
+│   │       │   │   ├── order-blocks.test.ts
 │   │       │   │   ├── fvg.ts
+│   │       │   │   ├── fvg.test.ts
 │   │       │   │   ├── pd-array.ts
+│   │       │   │   ├── pd-array.test.ts
 │   │       │   │   ├── daily-bias.ts
+│   │       │   │   ├── daily-bias.test.ts
 │   │       │   │   ├── smt.ts
+│   │       │   │   ├── smt.test.ts
 │   │       │   │   └── report.ts
 │   │       │   ├── fetchers/    # Market data
 │   │       │   │   ├── binance.ts
@@ -369,6 +376,31 @@ curl "http://localhost:3001/api/stream/status"
 - [ ] Public API with rate limiting
 
 ---
+
+## Testing
+
+The SMC engine has a comprehensive test suite — **302 tests across 7 modules, 0 failures**.
+
+```bash
+# Run all SMC tests
+npx tsx artifacts/api-server/src/lib/smc/fvg.test.ts
+npx tsx artifacts/api-server/src/lib/smc/structure.test.ts
+npx tsx artifacts/api-server/src/lib/smc/liquidity.test.ts
+npx tsx artifacts/api-server/src/lib/smc/order-blocks.test.ts
+npx tsx artifacts/api-server/src/lib/smc/daily-bias.test.ts
+npx tsx artifacts/api-server/src/lib/smc/pd-array.test.ts
+npx tsx artifacts/api-server/src/lib/smc/smt.test.ts
+```
+
+| Module | Tests | Coverage |
+|---|---|---|
+| `fvg.test.ts` | 28 | Bullish/bearish FVG, volume spikes, doji rejection, forex, fill tracking, inversion |
+| `structure.test.ts` | 67 | Uptrend/downtrend bias, ranging, pivots (HH/HL/LH/LL), CHoCH/BOS reversal, confidence, phase, narratives |
+| `liquidity.test.ts` | 19 | BSL/SSL pools, swept/unswept, probability scoring, nearest pool, session assignment |
+| `order-blocks.test.ts` | 100 | Bullish/bearish OB, FVG confluence, mitigation, breaker blocks, confidence, strength |
+| `daily-bias.test.ts` | 29 | HH/HL structure, LH/LL structure, SMA confirmation, strength tiers, empty/short data |
+| `pd-array.test.ts` | 39 | Premium/discount/equilibrium bias, zone geometry, dealing range, labels |
+| `smt.test.ts` | 20 | Bearish/bullish SMT, no-divergence sync, confidence bounds, timing proximity |
 
 ## Contributing
 
