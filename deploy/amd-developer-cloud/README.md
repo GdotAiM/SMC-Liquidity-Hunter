@@ -269,6 +269,4 @@ docker compose down -v       # stop and delete everything (re-download model)
   device mappings, correct env wiring to `provider.ts`).
 - **API server image**: builds successfully from the repo root `Dockerfile`.
 - **TypeScript**: compiles cleanly (`tsc --noEmit` passes with zero errors).
-- **End-to-end on MI300X**: pending deployment to a live AMD Developer Cloud VM —
-  running the full stack on real MI300X hardware is the remaining verification
-  step.
+- **End-to-end on MI300X**: ✅ validated on live AMD Developer Cloud hardware — the full stack (vLLM + Gemma 4 26B + API server + frontend + DB) runs end-to-end on an MI300X GPU instance.
